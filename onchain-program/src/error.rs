@@ -4,7 +4,7 @@
 use num_derive::FromPrimitive;
 use solana_program::{decode_error::DecodeError, 
     program_error::ProgramError,
-    info,
+    msg,
     program_error::PrintProgramError};
 use thiserror::Error;
 use num_traits::FromPrimitive;
@@ -38,8 +38,8 @@ impl PrintProgramError for LotteryError {
         E: 'static + std::error::Error + DecodeError<E> + PrintProgramError + FromPrimitive,
     {
         match self {
-            LotteryError::InvalidInstruction => info!("Invalid instruction"),
-            LotteryError::TestError => info!("TestError"),
+            LotteryError::InvalidInstruction => msg!("Invalid instruction"),
+            LotteryError::TestError => msg!("TestError"),
         }
     }
 }
