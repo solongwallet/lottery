@@ -27,9 +27,11 @@ class Content extends React.Component {
     this.payPrivKey = [140,85,119,173,23,204,204,148,203,41,107,83,176,34,167,63,180,128,189,18,187,235,122,218,79,254,216,149,117,170,115,74,56,28,173,97,136,25,66,83,199,115,122,109,206,35,28,138,109,100,88,118,102,116,122,85,208,44,64,221,40,55,226,250];
 
     this.payAccount = new Account(this.payPrivKey);
-    this.programID = '4MmMU35rUyrrzDqcxMkGb1ycna92jdH9YoKP4RXCBwtU';
-    this.configAccount = new Account(this.configPrivKey);
-    this.poolAccount = new Account(this.poolPrivKey);
+    this.programID = new PublicKey('6dFErD3LCjF7buV7EXH3HkoAnqbQwRiLQWUHGSsnvs9d');
+    // this.configAccount = new Account(this.configPrivKey);
+    // this.poolAccount = new Account(this.poolPrivKey);
+    this.configAccount = new Account();
+    this.poolAccount = new Account(); 
   }
 
 
@@ -45,17 +47,40 @@ class Content extends React.Component {
     );
   }
 
-  onInitialize() {
+  async onInitialize() {
+    let balanceNeeded = await this.connection.getMinimumBalanceForRentExemption(128);
+
+    const trxi0 =  SystemProgram.createAccount({
+      fromPubkey: this.payAccount.publicKey,
+      newAccountPubkey: this.configAccount.publicKey,
+      lamports: balanceNeeded,
+      space: 128,
+      programId: this.programID,
+    });
+    console.log("config:", this.configAccount.publicKey.toBase58());
+
+    const trxi1 =  SystemProgram.createAccount({
+      fromPubkey: this.payAccount.publicKey,
+      newAccountPubkey: this.poolAccount.publicKey,
+      lamports: balanceNeeded,
+      space: 128,
+      programId: this.programID,
+    });
+    console.log("pool:", this.poolAccount.publicKey.toBase58());
+
+
     let trxi = SolongLottery.createInitializeInstruction(
       this.configAccount.publicKey,
       this.poolAccount.publicKey,
-      new PublicKey(this.programID),
+      this.programID,
     );
 
     const transaction = new Transaction();
+    transaction.add(trxi0);
+    transaction.add(trxi1);
     transaction.add(trxi);
 
-    let signers= [this.payAccount];
+    let signers= [this.payAccount, this.configAccount, this.poolAccount];
     sendAndConfirmTransaction(this.connection, transaction, signers, {
         skipPreflight: false,
         commitment: 'recent',

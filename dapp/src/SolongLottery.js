@@ -46,7 +46,7 @@ export class SolongLottery {
         let keys = [
             {pubkey: configAccountKey, isSigner: false, isWritable: true},
             {pubkey: poolAccountKey, isSigner: false, isWritable: true},
-            {pubkey: programID, isSigner: false, isWritable: true},
+            {pubkey: SystemProgram.programId, isSigner: false, isWritable: true},
         ];
 
         const  trxi = new TransactionInstruction({
