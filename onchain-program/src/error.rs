@@ -16,6 +16,14 @@ pub enum LotteryError {
     #[error("Invalid instruction")]
     InvalidInstruction,
 
+    /// Invalid pool length
+    #[error("Invalid pool length")]
+    InvalidPoolLength,
+
+    /// Insufficent funds
+    #[error("Insufficent funds")]
+    InsufficentFunds,
+
     /// TestError 
     #[error("TestError")]
     TestError,
@@ -39,6 +47,8 @@ impl PrintProgramError for LotteryError {
     {
         match self {
             LotteryError::InvalidInstruction => msg!("Invalid instruction"),
+            LotteryError::InvalidPoolLength => msg!("Invalid pool length"),
+            LotteryError::InsufficentFunds => msg!("Insufficent funds"),
             LotteryError::TestError => msg!("TestError"),
         }
     }
