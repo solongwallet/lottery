@@ -7,13 +7,17 @@ use solana_program::{
     program_error::ProgramError,
 };
 use std::mem::size_of;
+use std::convert::TryInto;
 
 /// Instructions supported by the solong-lottery program.
 #[repr(C)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum LotteryInstruction {
     /// Initialize Instruction
-    Initialize, 
+    Initialize {
+        /// price of lottery , unit lamports
+        price : u64,
+    }, 
 
     /// SignIn Instruction
     SignIn,
@@ -31,9 +35,14 @@ impl LotteryInstruction {
     pub fn unpack(input: &[u8]) -> Result<Self, ProgramError> {
         use LotteryError::InvalidInstruction;
 
-        let (&tag, _rest) = input.split_first().ok_or(InvalidInstruction)?;
+        let (&tag, rest) = input.split_first().ok_or(InvalidInstruction)?;
         Ok(match tag { 
-            1 => Self::Initialize,
+            1 => {
+                let (price, _) = Self::unpack_u64(rest)?;
+                Self::Initialize{
+                    price
+                }
+            } 
             2 => Self::SignIn,
             3 => Self::Buy,
             4 => Self::Roll,
@@ -47,9 +56,12 @@ impl LotteryInstruction {
         let mut buf : Vec<u8>;
         let self_len= size_of::<Self>();
         match &*self {
-            Self::Initialize => {
+            Self::Initialize {
+                price,
+            } => {
                 buf = Vec::with_capacity(self_len);
                 buf.push(1); 
+                buf.extend_from_slice(&price.to_le_bytes());
             }
 
             Self::SignIn => {
@@ -69,4 +81,20 @@ impl LotteryInstruction {
         };
         buf
     }    
+
+
+
+    fn unpack_u64(input: &[u8]) -> Result<(u64, &[u8]), ProgramError> {
+        if input.len() >= 8 {
+            let (amount, rest) = input.split_at(8);
+            let amount = amount
+                .get(..8)
+                .and_then(|slice| slice.try_into().ok())
+                .map(u64::from_le_bytes)
+                .ok_or(LotteryError::InvalidInstruction)?;
+            Ok((amount, rest))
+        } else {
+            Err(LotteryError::InvalidInstruction.into())
+        }
+    }
 }

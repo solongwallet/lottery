@@ -3,7 +3,7 @@
 use crate::{
     error::LotteryError,
     instruction::LotteryInstruction,
-    state::LotteryPool,
+    state::LotteryState,
     log_info,
 };
 use solana_program::{
@@ -11,7 +11,10 @@ use solana_program::{
     entrypoint::ProgramResult,
     program_pack::{IsInitialized, Pack},
     pubkey::Pubkey,
+    system_instruction,
+    program::invoke,
 };
+
 
 /// Program state handler.
 pub struct Processor {}
@@ -23,9 +26,11 @@ impl Processor {
         let instruction = LotteryInstruction::unpack(input)?;
 
         match instruction {
-            LotteryInstruction::Initialize =>{
+            LotteryInstruction::Initialize{
+                price
+            }=>{
                 log_info("LotteryInstruction::Initialize");
-                Self::process_initialize(program_id, accounts)
+                Self::process_initialize(program_id, accounts, price)
             }
 
             LotteryInstruction::SignIn => {
@@ -49,12 +54,22 @@ impl Processor {
     pub fn process_initialize(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
+        price:u64,
     ) -> ProgramResult {
         log_info(format!("accounts len:{}", accounts.len()).as_str());
         let account_info_iter = &mut accounts.iter();
         let config_info = next_account_info(account_info_iter)?;
         let pool_info= next_account_info(account_info_iter)?;
+        let fee_info= next_account_info(account_info_iter)?;
 
+        //TODO: check permission first
+    
+
+        let mut lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
+        lottery.price = price;
+        lottery.fee =  *fee_info.key;
+        lottery.pool.clear();
+        LotteryState::pack(lottery, &mut pool_info.data.borrow_mut())?;
         Ok(())
     }
 
@@ -68,11 +83,10 @@ impl Processor {
         let config_info = next_account_info(account_info_iter)?;
         let pool_info= next_account_info(account_info_iter)?;
         let account_info= next_account_info(account_info_iter)?;
-        let mut pool = LotteryPool::unpack_unchecked(&pool_info.data.borrow())?;
-        //let mut accounts = &pool.accounts;
-        let key = pool.accounts.entry(*account_info.key).or_insert(0);
+        let mut lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
+        let key = lottery.pool.entry(*account_info.key).or_insert(0);
         *key += 1;
-        LotteryPool::pack(pool, &mut pool_info.data.borrow_mut())?;
+        LotteryState::pack(lottery, &mut pool_info.data.borrow_mut())?;
         Ok(())
     }
 
@@ -83,20 +97,31 @@ impl Processor {
     ) -> ProgramResult {
         log_info(format!("accounts len:{}", accounts.len()).as_str());
         let account_info_iter = &mut accounts.iter();
+        let system_program_info= next_account_info(account_info_iter)?;
         let config_info = next_account_info(account_info_iter)?;
         let pool_info= next_account_info(account_info_iter)?;
+        let fee_info= next_account_info(account_info_iter)?;
         let account_info= next_account_info(account_info_iter)?;
 
-        let account_lamports = account_info.lamports();
-        if account_lamports < 1000_000_000 {
-            return Err(LotteryError::InsufficentFunds.into);
-        }
-        **account_info.lamports.borrow_mut() = account_lamports - 1000_000_000;
+        let price_lamports = 1000_000_000;
+        // need not check balance Cau'z it will fail
+        invoke(
+            &system_instruction::transfer(
+                account_info.key,
+                fee_info.key,
+                price_lamports,
+            ),
+            &[
+                account_info.clone(),
+                fee_info.clone(),
+                system_program_info.clone(),
+            ],
+        )?;
 
-        let mut pool = LotteryPool::unpack_unchecked(&pool_info.data.borrow())?;
-        let key = pool.accounts.entry(*account_info.key).or_insert(0);
+        let mut  lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
+        let key = lottery.pool.entry(*account_info.key).or_insert(0);
         *key += 1;
-        LotteryPool::pack(pool, &mut pool_info.data.borrow_mut())?;
+        LotteryState::pack(lottery, &mut pool_info.data.borrow_mut())?;
         Ok(())
     }
 
