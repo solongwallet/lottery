@@ -15,6 +15,8 @@ use std::convert::TryInto;
 pub enum LotteryInstruction {
     /// Initialize Instruction
     Initialize {
+        /// fund from solong
+        fund : u64,
         /// price of lottery , unit lamports
         price : u64,
     }, 
@@ -38,8 +40,10 @@ impl LotteryInstruction {
         let (&tag, rest) = input.split_first().ok_or(InvalidInstruction)?;
         Ok(match tag { 
             1 => {
+                let (fund, rest) = Self::unpack_u64(rest)?;
                 let (price, _) = Self::unpack_u64(rest)?;
                 Self::Initialize{
+                    fund,
                     price
                 }
             } 
@@ -57,10 +61,12 @@ impl LotteryInstruction {
         let self_len= size_of::<Self>();
         match &*self {
             Self::Initialize {
+                fund,
                 price,
             } => {
                 buf = Vec::with_capacity(self_len);
                 buf.push(1); 
+                buf.extend_from_slice(&fund.to_le_bytes());
                 buf.extend_from_slice(&price.to_le_bytes());
             }
 

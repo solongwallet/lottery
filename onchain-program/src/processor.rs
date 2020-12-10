@@ -27,10 +27,11 @@ impl Processor {
 
         match instruction {
             LotteryInstruction::Initialize{
+                fund,
                 price
             }=>{
                 log_info("LotteryInstruction::Initialize");
-                Self::process_initialize(program_id, accounts, price)
+                Self::process_initialize(program_id, accounts, fund, price)
             }
 
             LotteryInstruction::SignIn => {
@@ -54,11 +55,11 @@ impl Processor {
     pub fn process_initialize(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
+        fund:u64,
         price:u64,
     ) -> ProgramResult {
         log_info(format!("accounts len:{}", accounts.len()).as_str());
         let account_info_iter = &mut accounts.iter();
-        let config_info = next_account_info(account_info_iter)?;
         let pool_info= next_account_info(account_info_iter)?;
         let fee_info= next_account_info(account_info_iter)?;
 
@@ -66,6 +67,8 @@ impl Processor {
     
 
         let mut lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
+        lottery.fund = fund;
+        lottery.award = 0;
         lottery.price = price;
         lottery.fee =  *fee_info.key;
         lottery.pool.clear();
@@ -80,7 +83,6 @@ impl Processor {
     ) -> ProgramResult {
         log_info(format!("accounts len:{}", accounts.len()).as_str());
         let account_info_iter = &mut accounts.iter();
-        let config_info = next_account_info(account_info_iter)?;
         let pool_info= next_account_info(account_info_iter)?;
         let account_info= next_account_info(account_info_iter)?;
         let mut lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
@@ -98,7 +100,6 @@ impl Processor {
         log_info(format!("accounts len:{}", accounts.len()).as_str());
         let account_info_iter = &mut accounts.iter();
         let system_program_info= next_account_info(account_info_iter)?;
-        let config_info = next_account_info(account_info_iter)?;
         let pool_info= next_account_info(account_info_iter)?;
         let fee_info= next_account_info(account_info_iter)?;
         let account_info= next_account_info(account_info_iter)?;
@@ -132,8 +133,15 @@ impl Processor {
     ) -> ProgramResult {
         log_info(format!("accounts len:{}", accounts.len()).as_str());
         let account_info_iter = &mut accounts.iter();
-        let config_info = next_account_info(account_info_iter)?;
         let pool_info= next_account_info(account_info_iter)?;
+
+        let mut lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
+
+
+        //TODO:
+
+        lottery.pool.clear();
+        LotteryState::pack(lottery, &mut pool_info.data.borrow_mut())?;
 
         Ok(())
     }
