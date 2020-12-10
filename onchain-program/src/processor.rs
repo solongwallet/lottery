@@ -13,6 +13,8 @@ use solana_program::{
     pubkey::Pubkey,
     system_instruction,
     program::invoke,
+    clock::Clock,
+    sysvar::Sysvar,
 };
 
 
@@ -134,11 +136,31 @@ impl Processor {
         log_info(format!("accounts len:{}", accounts.len()).as_str());
         let account_info_iter = &mut accounts.iter();
         let pool_info= next_account_info(account_info_iter)?;
+        let clock_sysvar_info = next_account_info(account_info_iter)?;
+        let clock = &Clock::from_account_info(clock_sysvar_info)?;
 
         let mut lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
+        if lottery.pool.len() == 0 {
+            return Ok(());
+        }
+        let mut total_lottery= 0u64;
+        for (_, v) in &lottery.pool {
+            total_lottery += *v as u64; 
+        }
+        let l:u64 = clock.epoch % total_lottery;
+        log_info(&format!("l for winner is {}", l));
+        let mut total_lottery = 0u64;
+        let mut winner : Pubkey;
+        for (k, v) in &lottery.pool {
+            total_lottery += *v as u64; 
+            if total_lottery == l {
+                winner = *k;
+                log_info(&format!("winner is {}", winner));
+                break;
+            }
+        }
+        //TODO: send awards
 
-
-        //TODO:
 
         lottery.pool.clear();
         LotteryState::pack(lottery, &mut pool_info.data.borrow_mut())?;
