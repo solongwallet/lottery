@@ -87,3 +87,75 @@ impl Pack for LotteryState {
         }
     }
 }
+
+
+/// AwardBill
+#[repr(C)]
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct AwardBill{
+    /// award for the winner
+    pub award: u64,
+    /// if winner has rewarded
+    pub rewarded: bool,
+}
+
+/// AwardState data.
+#[repr(C)]
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct AwardState {
+    /// all winner billboard
+    pub billboard: HashMap<Pubkey, AwardBill>,
+}
+
+impl Sealed for AwardState {}
+impl IsInitialized for AwardState {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+}
+impl Pack for AwardState {
+    const LEN: usize = 1000*(32+9);
+    fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
+        let mut billboard = HashMap::new();
+        let count_buf = array_ref![src, 0, 2];
+        let count =  u16::from_le_bytes(*count_buf);
+        for i in 0..count {
+            let i = i as usize;
+            let offset:usize = 2+i*(32+9) ;
+            let key_buf = array_ref![src,offset, 32];
+            let key = Pubkey::new_from_array(*key_buf);
+            let award_buf= array_ref![src,offset+32, 8];
+            let award = u64::from_le_bytes(*award_buf);
+            let rewarded_buf = array_ref![src,offset+40, 1];
+            let rewarded = rewarded_buf[0] != 0;
+            billboard.insert(key, AwardBill{
+                award,
+                rewarded
+            });
+        }
+
+        Ok(AwardState {
+            billboard,
+        })
+    }
+    fn pack_into_slice(&self, dst: &mut [u8]) {
+        let count_buf = array_mut_ref![dst, 0, 2];
+        let count:u16 = self.billboard.len() as u16;
+        count_buf.copy_from_slice(&count.to_le_bytes());
+        let mut i:usize=0;
+        for (key, val) in self.billboard.iter() {
+            let offset:usize = 2+i*(32+9);
+            let key_buf = array_mut_ref![dst, offset, 32];
+            key_buf.copy_from_slice(key.as_ref());
+            let award_buf = array_mut_ref![dst, offset+32, 8];
+            award_buf.copy_from_slice(&val.award.to_le_bytes());
+            let reward_buf = array_mut_ref![dst, offset+40, 1];
+            if val.rewarded {
+                reward_buf[0] = 1;
+            } else {
+                reward_buf[0] = 0;
+            }
+            i += 1;
+        }
+    }
+}
