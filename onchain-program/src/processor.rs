@@ -192,13 +192,28 @@ impl Processor {
         accounts: &[AccountInfo],
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
-        let pool_info= next_account_info(account_info_iter)?;
+        let system_program_info= next_account_info(account_info_iter)?;
+        let account_info= next_account_info(account_info_iter)?;
         let award_info = next_account_info(account_info_iter)?;
+        let program_info = next_account_info(account_info_iter)?;
         let mut award= AwardState::unpack_unchecked(&award_info.data.borrow())?;
 
         for val in &mut award.billboard {
             if ! val.rewarded  {
                 // TODO send award
+                // need not check balance Cau'z it will fail
+                invoke(
+                    &system_instruction::transfer(
+                        program_info.key,
+                        account_info.key,
+                        val.award,
+                    ),
+                    &[
+                        program_info.clone(),
+                        account_info.clone(),
+                        system_program_info.clone(),
+                    ],
+                )?;
                 val.rewarded = true;
             }
         }
