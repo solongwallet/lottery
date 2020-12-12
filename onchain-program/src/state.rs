@@ -93,6 +93,8 @@ impl Pack for LotteryState {
 #[repr(C)]
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct AwardBill{
+    /// winner's account
+    pub account: Pubkey,
     /// award for the winner
     pub award: u64,
     /// if winner has rewarded
@@ -104,7 +106,7 @@ pub struct AwardBill{
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct AwardState {
     /// all winner billboard
-    pub billboard: HashMap<Pubkey, AwardBill>,
+    pub billboard: Vec<AwardBill>,
 }
 
 impl Sealed for AwardState {}
@@ -114,21 +116,22 @@ impl IsInitialized for AwardState {
     }
 }
 impl Pack for AwardState {
-    const LEN: usize = 1000*(32+9);
+    const LEN: usize = 1000*(32+13);
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
-        let mut billboard = HashMap::new();
+        let mut billboard = Vec::new();
         let count_buf = array_ref![src, 0, 2];
         let count =  u16::from_le_bytes(*count_buf);
         for i in 0..count {
             let i = i as usize;
             let offset:usize = 2+i*(32+9) ;
-            let key_buf = array_ref![src,offset, 32];
-            let key = Pubkey::new_from_array(*key_buf);
+            let account_buf = array_ref![src,offset, 32];
+            let account= Pubkey::new_from_array(*account_buf);
             let award_buf= array_ref![src,offset+32, 8];
             let award = u64::from_le_bytes(*award_buf);
             let rewarded_buf = array_ref![src,offset+40, 1];
             let rewarded = rewarded_buf[0] != 0;
-            billboard.insert(key, AwardBill{
+            billboard.push(AwardBill{
+                account,
                 award,
                 rewarded
             });
@@ -143,10 +146,10 @@ impl Pack for AwardState {
         let count:u16 = self.billboard.len() as u16;
         count_buf.copy_from_slice(&count.to_le_bytes());
         let mut i:usize=0;
-        for (key, val) in self.billboard.iter() {
+        for val in &self.billboard{
             let offset:usize = 2+i*(32+9);
-            let key_buf = array_mut_ref![dst, offset, 32];
-            key_buf.copy_from_slice(key.as_ref());
+            let account_buf = array_mut_ref![dst, offset, 32];
+            account_buf.copy_from_slice(val.account.as_ref());
             let award_buf = array_mut_ref![dst, offset+32, 8];
             award_buf.copy_from_slice(&val.award.to_le_bytes());
             let reward_buf = array_mut_ref![dst, offset+40, 1];

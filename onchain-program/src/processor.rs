@@ -3,7 +3,7 @@
 use crate::{
     error::LotteryError,
     instruction::LotteryInstruction,
-    state::LotteryState,
+    state::{LotteryState, AwardState, AwardBill},
     log_info,
 };
 use solana_program::{
@@ -49,6 +49,11 @@ impl Processor {
             LotteryInstruction::Roll => {
                 log_info("Instruction: Roll");
                 Self::process_roll(program_id, accounts)
+            }
+
+            LotteryInstruction::Reward => {
+                log_info("Instruction: Reward");
+                Self::process_reward(program_id, accounts)
             }
         }
     }
@@ -136,6 +141,7 @@ impl Processor {
         log_info(format!("accounts len:{}", accounts.len()).as_str());
         let account_info_iter = &mut accounts.iter();
         let pool_info= next_account_info(account_info_iter)?;
+        let award_info = next_account_info(account_info_iter)?;
         let clock_sysvar_info = next_account_info(account_info_iter)?;
         let clock = &Clock::from_account_info(clock_sysvar_info)?;
 
@@ -150,7 +156,7 @@ impl Processor {
         let l:u64 = clock.epoch % total_lottery;
         log_info(&format!("l for winner is {}", l));
         let mut total_lottery = 0u64;
-        let mut winner : Pubkey;
+        let mut winner : Pubkey = Pubkey::new_from_array([0u8; 32]);
         for (k, v) in &lottery.pool {
             total_lottery += *v as u64; 
             if total_lottery == l {
@@ -159,12 +165,45 @@ impl Processor {
                 break;
             }
         }
-        //TODO: send awards
+        
+        if winner == Pubkey::new_from_array([0u8; 32]) {
+            return Ok(());
+        }
 
+        let mut award= AwardState::unpack_unchecked(&award_info.data.borrow())?;
+        let bill = AwardBill{
+            account: winner,
+            award: lottery.award + lottery.fund,
+            rewarded: false,
+        };
+        award.billboard.push(bill);
+        AwardState::pack(award, &mut award_info.data.borrow_mut())?;
 
+        lottery.award = 0;
         lottery.pool.clear();
         LotteryState::pack(lottery, &mut pool_info.data.borrow_mut())?;
 
+        Ok(())
+    }
+
+    /// Processes an [Initialize](enum.Instruction.html).
+    pub fn process_reward(
+        program_id: &Pubkey,
+        accounts: &[AccountInfo],
+    ) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let pool_info= next_account_info(account_info_iter)?;
+        let award_info = next_account_info(account_info_iter)?;
+        let mut award= AwardState::unpack_unchecked(&award_info.data.borrow())?;
+
+        for val in &mut award.billboard {
+            if ! val.rewarded  {
+                // TODO send award
+                val.rewarded = true;
+            }
+        }
+       
+        AwardState::pack(award, &mut award_info.data.borrow_mut())?;
         Ok(())
     }
  

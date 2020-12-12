@@ -29,6 +29,9 @@ pub enum LotteryInstruction {
 
     /// Roll Instruction
     Roll,
+
+    /// Reward Instruction
+    Reward,
 }
 
 
@@ -50,6 +53,7 @@ impl LotteryInstruction {
             2 => Self::SignIn,
             3 => Self::Buy,
             4 => Self::Roll,
+            5 => Self::Reward,
             _ => return Err(LotteryError::InvalidInstruction.into()),
         })
     }
@@ -83,6 +87,11 @@ impl LotteryInstruction {
             Self::Roll=> {
                 buf = Vec::with_capacity(self_len);
                 buf.push(4); 
+            }
+
+            Self::Reward => {
+                buf = Vec::with_capacity(self_len);
+                buf.push(5); 
             }
         };
         buf
