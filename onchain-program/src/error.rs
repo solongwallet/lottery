@@ -24,6 +24,10 @@ pub enum LotteryError {
     #[error("Insufficent funds")]
     InsufficentFunds,
 
+    /// Invalid permission
+    #[error("Invalid permission")]
+    InvalidPermission,
+
     /// TestError 
     #[error("TestError")]
     TestError,
@@ -49,6 +53,7 @@ impl PrintProgramError for LotteryError {
             LotteryError::InvalidInstruction => msg!("Invalid instruction"),
             LotteryError::InvalidPoolLength => msg!("Invalid pool length"),
             LotteryError::InsufficentFunds => msg!("Insufficent funds"),
+            LotteryError::InvalidPermission=> msg!("Invalid permission"),
             LotteryError::TestError => msg!("TestError"),
         }
     }

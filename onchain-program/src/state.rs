@@ -22,6 +22,8 @@ pub struct LotteryState {
     pub price: u64,
     /// fee account
     pub fee : Pubkey,
+    /// award accounts
+    pub billboard: Pubkey,
     /// all accounts
     pub pool: HashMap<Pubkey, u16>,
 }
@@ -43,16 +45,18 @@ impl Pack for LotteryState {
         let price =  u64::from_le_bytes(*price_buf);
         let fee_buf = array_ref![src, 24, 32];
         let fee = Pubkey::new_from_array(*fee_buf);
-        let count_buf = array_ref![src, 56, 2];
+        let billboard_buf = array_ref![src, 56, 32];
+        let billboard = Pubkey::new_from_array(*billboard_buf);
+        let count_buf = array_ref![src, 88, 2];
         let count =  u16::from_le_bytes(*count_buf);
         let mut pool = HashMap::new();
         for i in 0..count {
             let i = i as usize;
-            let offset:usize = 58+i*(32+2) ;
+            let offset:usize = 90+i*(32+2) ;
             let key_buf = array_ref![src,offset, 32];
             let key = Pubkey::new_from_array(*key_buf);
             let lottery_buf = array_ref![src,offset+32, 2];
-            let lottery = u16::from_le_bytes(*count_buf);
+            let lottery = u16::from_le_bytes(*lottery_buf);
             pool.insert(key, lottery);
         }
 
@@ -61,6 +65,7 @@ impl Pack for LotteryState {
             fund,
             price,
             fee,
+            billboard,
             pool,
         })
     }
@@ -73,12 +78,14 @@ impl Pack for LotteryState {
         price_buf.copy_from_slice(&self.price.to_le_bytes());
         let fee_buf = array_mut_ref![dst, 24, 32];
         fee_buf.copy_from_slice(self.fee.as_ref());
-        let count_buf = array_mut_ref![dst, 56, 2];
+        let billboard_buf = array_mut_ref![dst, 56, 32];
+        billboard_buf.copy_from_slice(self.billboard.as_ref());
+        let count_buf = array_mut_ref![dst, 88, 2];
         let count:u16 = self.pool.len() as u16;
         count_buf.copy_from_slice(&count.to_le_bytes());
         let mut i:usize=0;
         for (key, val) in self.pool.iter() {
-            let offset:usize = 58+i*(32+2);
+            let offset:usize = 90+i*(32+2);
             let key_buf = array_mut_ref![dst, offset, 32];
             key_buf.copy_from_slice(key.as_ref());
             let lottery_buf = array_mut_ref![dst, offset+32, 2];

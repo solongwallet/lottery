@@ -9,7 +9,7 @@ use crate::{
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
-    program_pack::{IsInitialized, Pack},
+    program_pack::Pack,
     pubkey::Pubkey,
     system_instruction,
     program::invoke,
@@ -69,15 +69,23 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let pool_info= next_account_info(account_info_iter)?;
         let fee_info= next_account_info(account_info_iter)?;
+        let billboard_info= next_account_info(account_info_iter)?;
+        let owner_info= next_account_info(account_info_iter)?;
+        let program_info = next_account_info(account_info_iter)?;
 
-        //TODO: check permission first
-    
+        //check permission first
+        if owner_info.key != program_info.owner ||
+            program_id != program_info.key || 
+            !owner_info.is_signer{
+            return Err(LotteryError::InvalidPermission.into());
+        } 
 
         let mut lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
         lottery.fund = fund;
         lottery.award = 0;
         lottery.price = price;
         lottery.fee =  *fee_info.key;
+        lottery.billboard = *billboard_info.key;
         lottery.pool.clear();
         LotteryState::pack(lottery, &mut pool_info.data.borrow_mut())?;
         Ok(())
@@ -85,7 +93,7 @@ impl Processor {
 
     /// Processes an [Initialize](enum.Instruction.html).
     pub fn process_signin(
-        program_id: &Pubkey,
+        _program_id: &Pubkey,
         accounts: &[AccountInfo],
     ) -> ProgramResult {
         log_info(format!("accounts len:{}", accounts.len()).as_str());
@@ -101,7 +109,7 @@ impl Processor {
 
     /// Processes an [Initialize](enum.Instruction.html).
     pub fn process_buy(
-        program_id: &Pubkey,
+        _program_id: &Pubkey,
         accounts: &[AccountInfo],
     ) -> ProgramResult {
         log_info(format!("accounts len:{}", accounts.len()).as_str());
@@ -135,7 +143,7 @@ impl Processor {
 
     /// Processes an [Initialize](enum.Instruction.html).
     pub fn process_roll(
-        program_id: &Pubkey,
+        _program_id: &Pubkey,
         accounts: &[AccountInfo],
     ) -> ProgramResult {
         log_info(format!("accounts len:{}", accounts.len()).as_str());
@@ -188,7 +196,7 @@ impl Processor {
 
     /// Processes an [Initialize](enum.Instruction.html).
     pub fn process_reward(
-        program_id: &Pubkey,
+        _program_id: &Pubkey,
         accounts: &[AccountInfo],
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
