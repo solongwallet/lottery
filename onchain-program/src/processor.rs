@@ -70,13 +70,13 @@ impl Processor {
         let pool_info= next_account_info(account_info_iter)?;
         let fee_info= next_account_info(account_info_iter)?;
         let billboard_info= next_account_info(account_info_iter)?;
-        let owner_info= next_account_info(account_info_iter)?;
-        let program_info = next_account_info(account_info_iter)?;
+        let admin_info= next_account_info(account_info_iter)?;
 
         //check permission first
-        if owner_info.key != program_info.owner ||
-            program_id != program_info.key || 
-            !owner_info.is_signer{
+        // TODO: add equal check for admin_info.key
+        if billboard_info.owner != program_id ||
+            pool_info.owner_info != program_id ||
+            !admin_info.is_signer{
             return Err(LotteryError::InvalidPermission.into());
         } 
 
