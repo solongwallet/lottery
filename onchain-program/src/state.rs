@@ -8,7 +8,16 @@ use solana_program::{
     program_pack::{IsInitialized, Pack, Sealed},
     pubkey::Pubkey,
 };
-use std::collections::HashMap;
+
+/// LotteryRecord 
+#[repr(C)]
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct LotteryRecord{
+    /// lottery's account
+    pub account: Pubkey,
+    /// amount for the lottery 
+    pub amount: u16,
+}
 
 /// LotteryState data.
 #[repr(C)]
@@ -25,7 +34,7 @@ pub struct LotteryState {
     /// award accounts
     pub billboard: Pubkey,
     /// all accounts
-    pub pool: HashMap<Pubkey, u16>,
+    pub pool: Vec<LotteryRecord>,
 }
 
 impl Sealed for LotteryState {}
@@ -49,15 +58,18 @@ impl Pack for LotteryState {
         let billboard = Pubkey::new_from_array(*billboard_buf);
         let count_buf = array_ref![src, 88, 2];
         let count =  u16::from_le_bytes(*count_buf);
-        let mut pool = HashMap::new();
+        let mut pool = Vec::new();
         for i in 0..count {
             let i = i as usize;
             let offset:usize = 90+i*(32+2) ;
-            let key_buf = array_ref![src,offset, 32];
-            let key = Pubkey::new_from_array(*key_buf);
-            let lottery_buf = array_ref![src,offset+32, 2];
-            let lottery = u16::from_le_bytes(*lottery_buf);
-            pool.insert(key, lottery);
+            let account_buf = array_ref![src,offset, 32];
+            let account= Pubkey::new_from_array(*account_buf);
+            let amount_buf = array_ref![src,offset+32, 2];
+            let amount = u16::from_le_bytes(*amount_buf);
+            pool.push(LotteryRecord{
+                account,
+                amount,
+            });
         }
 
         Ok(LotteryState {
@@ -84,12 +96,12 @@ impl Pack for LotteryState {
         let count:u16 = self.pool.len() as u16;
         count_buf.copy_from_slice(&count.to_le_bytes());
         let mut i:usize=0;
-        for (key, val) in self.pool.iter() {
+        for val in &self.pool{
             let offset:usize = 90+i*(32+2);
             let key_buf = array_mut_ref![dst, offset, 32];
-            key_buf.copy_from_slice(key.as_ref());
+            key_buf.copy_from_slice(val.account.as_ref());
             let lottery_buf = array_mut_ref![dst, offset+32, 2];
-            lottery_buf.copy_from_slice(&val.to_le_bytes());
+            lottery_buf.copy_from_slice(&val.amount.to_le_bytes());
             i += 1;
         }
     }

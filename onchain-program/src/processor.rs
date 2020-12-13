@@ -80,6 +80,8 @@ impl Processor {
             return Err(LotteryError::InvalidPermission.into());
         } 
 
+        // TODO: check account's data length
+
         let mut lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
         lottery.fund = fund;
         lottery.award = 0;
@@ -101,8 +103,11 @@ impl Processor {
         let pool_info= next_account_info(account_info_iter)?;
         let account_info= next_account_info(account_info_iter)?;
         let mut lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
-        let key = lottery.pool.entry(*account_info.key).or_insert(0);
-        *key += 1;
+        for val in &mut lottery.pool{
+            if val.account == *account_info.key {
+                val.amount += 1;
+            }
+        }
         LotteryState::pack(lottery, &mut pool_info.data.borrow_mut())?;
         Ok(())
     }
@@ -135,8 +140,11 @@ impl Processor {
         )?;
 
         let mut  lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
-        let key = lottery.pool.entry(*account_info.key).or_insert(0);
-        *key += 1;
+        for val in &mut lottery.pool{
+            if val.account == *account_info.key {
+                val.amount += 1;
+            }
+        }
         LotteryState::pack(lottery, &mut pool_info.data.borrow_mut())?;
         Ok(())
     }
@@ -158,17 +166,18 @@ impl Processor {
             return Ok(());
         }
         let mut total_lottery= 0u64;
-        for (_, v) in &lottery.pool {
-            total_lottery += *v as u64; 
+        for val in &lottery.pool{
+            total_lottery += val.amount as u64;
         }
         let l:u64 = clock.epoch % total_lottery;
         log_info(&format!("l for winner is {}", l));
         let mut total_lottery = 0u64;
         let mut winner : Pubkey = Pubkey::new_from_array([0u8; 32]);
-        for (k, v) in &lottery.pool {
-            total_lottery += *v as u64; 
+
+        for val in &lottery.pool{
+            total_lottery += val.amount as u64;
             if total_lottery == l {
-                winner = *k;
+                winner = val.account;
                 log_info(&format!("winner is {}", winner));
                 break;
             }
@@ -208,7 +217,6 @@ impl Processor {
 
         for val in &mut award.billboard {
             if ! val.rewarded  {
-                // TODO send award
                 // need not check balance Cau'z it will fail
                 invoke(
                     &system_instruction::transfer(
