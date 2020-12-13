@@ -17,20 +17,20 @@ class Content extends React.Component {
     super(props)
     this.state = { };
     this.onInitialize = this.onInitialize.bind(this);
+    this.onSign = this.onSign.bind(this);
+    this.onBuy = this.onBuy.bind(this);
+    this.onRoll = this.onRoll.bind(this);
+    this.onReward = this.onReward.bind(this);
 
     //let url =  'http://api.mainnet-beta.solana.com';
     let url =  'http://119.28.234.214:8899';
     //let url =  'https://devnet.solana.com';
     this.connection = new Connection(url);
-    this.configPrivKey = [70,157,194,67,122,225,198,233,88,28,121,19,249,188,135,202,177,134,40,118,100,254,118,122,47,223,194,208,216,113,207,104,58,23,19,111,101,77,130,118,89,72,88,223,14,80,172,107,167,165,192,97,74,234,247,114,134,76,95,219,243,153,246,144];
-    this.poolPrivKey = [0,113,195,237,177,25,179,61,16,187,69,126,120,17,128,132,129,129,223,24,75,105,203,115,46,120,43,33,129,58,224,25,195,158,112,135,218,33,117,12,1,57,48,164,246,241,113,146,209,54,220,146,42,201,175,181,254,182,109,87,56,185,120,124];
     this.payPrivKey = [140,85,119,173,23,204,204,148,203,41,107,83,176,34,167,63,180,128,189,18,187,235,122,218,79,254,216,149,117,170,115,74,56,28,173,97,136,25,66,83,199,115,122,109,206,35,28,138,109,100,88,118,102,116,122,85,208,44,64,221,40,55,226,250];
 
     this.payAccount = new Account(this.payPrivKey);
-    this.programID = new PublicKey('6dFErD3LCjF7buV7EXH3HkoAnqbQwRiLQWUHGSsnvs9d');
-    // this.configAccount = new Account(this.configPrivKey);
-    // this.poolAccount = new Account(this.poolPrivKey);
-    this.configAccount = new Account();
+    this.programID = new PublicKey('FKZUNWiiE5oAmnPcdC8CQPgnmj3MxEtqML1PqfQBjnAy');
+    this.billboardAccount = new Account();
     this.poolAccount = new Account(); 
   }
 
@@ -43,36 +43,147 @@ class Content extends React.Component {
         <React.Fragment>
           <Button onClick={this.onInitialize}> initialize</Button>
         </React.Fragment>
+        <Divider />
+        <React.Fragment>
+          <Button onClick={this.onSign}> sign</Button>
+        </React.Fragment>
+        <Divider />
+        <React.Fragment>
+          <Button onClick={this.onBuy}> buy</Button>
+        </React.Fragment>
+        <React.Fragment>
+          <Button onClick={this.onRoll}> roll</Button>
+        </React.Fragment>
+        <React.Fragment>
+          <Button onClick={this.onReward}> reward</Button>
+        </React.Fragment>
       </Container>
     );
   }
 
+  async onRoll() {
+    let trxi = SolongLottery.createRollInstruction(
+      this.payAccount.publicKey,
+      this.poolAccount.publicKey,
+      this.billboardAccount.publicKey,
+      this.programID,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(trxi);
+
+    let signers= [this.payAccount];
+    sendAndConfirmTransaction(this.connection, transaction, signers, {
+        skipPreflight: false,
+        commitment: 'recent',
+        preflightCommitment: 'recent',
+    }).then(()=>{
+      console.log("done roll");
+    }).catch((e)=>{
+      console.log("error:", e);
+    }) 
+  }
+
+  async onReward() {
+    let trxi = SolongLottery.createRewardInstruction(
+      this.payAccount.publicKey,
+      this.billboardAccount.publicKey,
+      this.programID,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(trxi);
+
+    let signers= [this.payAccount];
+    sendAndConfirmTransaction(this.connection, transaction, signers, {
+        skipPreflight: false,
+        commitment: 'recent',
+        preflightCommitment: 'recent',
+    }).then(()=>{
+      console.log("done reward");
+    }).catch((e)=>{
+      console.log("error:", e);
+    }) 
+  }
+
+  async onSign() {
+    let trxi = SolongLottery.createSignInstruction(
+      this.payAccount.publicKey,
+      this.poolAccount.publicKey,
+      this.programID,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(trxi);
+
+    let signers= [this.payAccount];
+    sendAndConfirmTransaction(this.connection, transaction, signers, {
+        skipPreflight: false,
+        commitment: 'recent',
+        preflightCommitment: 'recent',
+    }).then(()=>{
+      console.log("done sign");
+    }).catch((e)=>{
+      console.log("error:", e);
+    }) 
+  }
+
+  async onBuy() {
+    let trxi = SolongLottery.createBuyInstruction(
+      this.payAccount.publicKey,
+      this.payAccount.publicKey,
+      this.poolAccount.publicKey,
+      this.programID,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(trxi);
+
+    let signers= [this.payAccount];
+    sendAndConfirmTransaction(this.connection, transaction, signers, {
+        skipPreflight: false,
+        commitment: 'recent',
+        preflightCommitment: 'recent',
+    }).then(()=>{
+      console.log("done buy");
+    }).catch((e)=>{
+      console.log("error:", e);
+    }) 
+  }
+
   async onInitialize() {
-    let balanceNeeded = await this.connection.getMinimumBalanceForRentExemption(128);
+    let poolSpace = 8+32+2+1000*(32+2);
+    let awardSpace = 1000*(32+13);
+    let poolNeeded = await this.connection.getMinimumBalanceForRentExemption(poolSpace);
+    let awardNeeded = await this.connection.getMinimumBalanceForRentExemption(awardSpace);
 
     const trxi0 =  SystemProgram.createAccount({
       fromPubkey: this.payAccount.publicKey,
-      newAccountPubkey: this.configAccount.publicKey,
-      lamports: balanceNeeded,
-      space: 128,
+      newAccountPubkey: this.billboardAccount.publicKey,
+      lamports: awardNeeded,
+      space: awardSpace,
       programId: this.programID,
     });
-    console.log("config:", this.configAccount.publicKey.toBase58());
+    console.log("award:", this.billboardAccount.publicKey.toBase58());
 
     const trxi1 =  SystemProgram.createAccount({
       fromPubkey: this.payAccount.publicKey,
       newAccountPubkey: this.poolAccount.publicKey,
-      lamports: balanceNeeded,
-      space: 128,
+      lamports: poolNeeded,
+      space: poolSpace,
       programId: this.programID,
     });
     console.log("pool:", this.poolAccount.publicKey.toBase58());
 
 
     let trxi = SolongLottery.createInitializeInstruction(
-      this.configAccount.publicKey,
+      this.payAccount.publicKey,
+      this.payAccount.publicKey,
+      this.billboardAccount.publicKey,
       this.poolAccount.publicKey,
       this.programID,
+      10000000000,
+      1000000000,
     );
 
     const transaction = new Transaction();
@@ -80,13 +191,13 @@ class Content extends React.Component {
     transaction.add(trxi1);
     transaction.add(trxi);
 
-    let signers= [this.payAccount, this.configAccount, this.poolAccount];
+    let signers= [this.payAccount, this.billboardAccount, this.poolAccount];
     sendAndConfirmTransaction(this.connection, transaction, signers, {
         skipPreflight: false,
         commitment: 'recent',
         preflightCommitment: 'recent',
     }).then(()=>{
-      console.log("done");
+      console.log("done init");
     }).catch((e)=>{
       console.log("error:", e);
     })
