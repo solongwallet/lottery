@@ -75,7 +75,7 @@ impl Processor {
         //check permission first
         // TODO: add equal check for admin_info.key
         if billboard_info.owner != program_id ||
-            pool_info.owner_info != program_id ||
+            pool_info.owner != program_id ||
             !admin_info.is_signer{
             return Err(LotteryError::InvalidPermission.into());
         } 
