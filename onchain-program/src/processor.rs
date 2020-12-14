@@ -153,9 +153,9 @@ impl Processor {
                 system_program_info.clone(),
             ],
         )?;
-        lottery.award +=1000_000_000;
 
         let mut  lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
+        lottery.award +=1000_000_000;
         let mut founded = false;
         for val in &mut lottery.pool{
             if val.account == *account_info.key {
