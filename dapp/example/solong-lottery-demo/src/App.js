@@ -8,7 +8,8 @@ import Divider from '@material-ui/core/Divider'
 import {AccountManager} from 'solong.js'
 import { LAMPORTS_PER_SOL,Account, PublicKey, Connection, SystemProgram ,Transaction,sendAndConfirmTransaction} from '@solana/web3.js';
 import { Button,Grid } from '@material-ui/core';
-import {SolongLottery} from './SolongLottery.js/SolongLottery'
+import {SolongLottery} from './SolongLottery.js/SolongLottery';
+import * as Layout from './SolongLottery.js/Layout';
 
 
 class Content extends React.Component {
@@ -21,15 +22,20 @@ class Content extends React.Component {
     this.onBuy = this.onBuy.bind(this);
     this.onRoll = this.onRoll.bind(this);
     this.onReward = this.onReward.bind(this);
+    this.onQueryBillboard = this.onQueryBillboard.bind(this);
+    this.onQueryPool = this.onQueryPool.bind(this);
 
     //let url =  'http://api.mainnet-beta.solana.com';
     let url =  'http://119.28.234.214:8899';
     //let url =  'https://devnet.solana.com';
     this.connection = new Connection(url);
-    this.payPrivKey = [140,85,119,173,23,204,204,148,203,41,107,83,176,34,167,63,180,128,189,18,187,235,122,218,79,254,216,149,117,170,115,74,56,28,173,97,136,25,66,83,199,115,122,109,206,35,28,138,109,100,88,118,102,116,122,85,208,44,64,221,40,55,226,250];
+    this.adminPrivKey = [140,85,119,173,23,204,204,148,203,41,107,83,176,34,167,63,180,128,189,18,187,235,122,218,79,254,216,149,117,170,115,74,56,28,173,97,136,25,66,83,199,115,122,109,206,35,28,138,109,100,88,118,102,116,122,85,208,44,64,221,40,55,226,250];
+    this.playerPrivKey = [136,110,52,25,177,59,33,252,208,157,67,200,66,34,83,248,94,110,161,40,156,235,104,28,73,233,3,255,109,59,85,164,240,29,177,212,46,230,9,255,12,214,10,209,78,79,174,119,160,91,178,114,42,99,0,177,50,110,54,221,212,219,204,115];
 
-    this.payAccount = new Account(this.payPrivKey);
-    this.programID = new PublicKey('FKZUNWiiE5oAmnPcdC8CQPgnmj3MxEtqML1PqfQBjnAy');
+    this.adminAccount = new Account(this.adminPrivKey);
+    this.playerAccount = new Account(this.playerPrivKey);
+    this.programID = new PublicKey('D57EVo8UfKmCpKoUAbBtG3HRhecWafThUfKrq2JNPfFJ');
+    this.feeAccountKey = new PublicKey('AAe9zTZYBne6zjshfQARygr51yQx7R36eSSiwieWHXyH');
     this.billboardAccount = new Account();
     this.poolAccount = new Account(); 
   }
@@ -51,19 +57,45 @@ class Content extends React.Component {
         <React.Fragment>
           <Button onClick={this.onBuy}> buy</Button>
         </React.Fragment>
+        <Divider />
         <React.Fragment>
           <Button onClick={this.onRoll}> roll</Button>
         </React.Fragment>
+        <Divider />
         <React.Fragment>
           <Button onClick={this.onReward}> reward</Button>
+        </React.Fragment>
+        <Divider />
+        <React.Fragment>
+          <Button onClick={this.onQueryPool}> Pool </Button>
+        </React.Fragment>
+        <Divider />
+        <React.Fragment>
+          <Button onClick={this.onQueryBillboard}> billboard</Button>
         </React.Fragment>
       </Container>
     );
   }
 
+  async onQueryPool() {
+    SolongLottery.GetLotteryPool(this.connection, 
+      this.poolAccount.publicKey,
+      this.programID).then((pool)=>{
+          console.log("pool:", pool);
+      });
+  }
+
+  async onQueryBillboard() {
+    SolongLottery.GetBillboard(this.connection, 
+      new PublicKey("E1WeVyhZbdm7D9HPGdqweiDLBp3HXUf2hJuJKk8htQPN"),
+      this.programID).then((pool)=>{
+          console.log("award:", pool);
+      });
+  }
+
   async onRoll() {
     let trxi = SolongLottery.createRollInstruction(
-      this.payAccount.publicKey,
+      this.adminAccount.publicKey,
       this.poolAccount.publicKey,
       this.billboardAccount.publicKey,
       this.programID,
@@ -72,7 +104,7 @@ class Content extends React.Component {
     const transaction = new Transaction();
     transaction.add(trxi);
 
-    let signers= [this.payAccount];
+    let signers= [this.adminAccount];
     sendAndConfirmTransaction(this.connection, transaction, signers, {
         skipPreflight: false,
         commitment: 'recent',
@@ -86,7 +118,8 @@ class Content extends React.Component {
 
   async onReward() {
     let trxi = SolongLottery.createRewardInstruction(
-      this.payAccount.publicKey,
+      this.adminAccount.publicKey,
+      this.playerAccount.publicKey,
       this.billboardAccount.publicKey,
       this.programID,
     );
@@ -94,7 +127,7 @@ class Content extends React.Component {
     const transaction = new Transaction();
     transaction.add(trxi);
 
-    let signers= [this.payAccount];
+    let signers= [this.adminAccount];
     sendAndConfirmTransaction(this.connection, transaction, signers, {
         skipPreflight: false,
         commitment: 'recent',
@@ -108,7 +141,7 @@ class Content extends React.Component {
 
   async onSign() {
     let trxi = SolongLottery.createSignInstruction(
-      this.payAccount.publicKey,
+      this.playerAccount.publicKey,
       this.poolAccount.publicKey,
       this.programID,
     );
@@ -116,7 +149,7 @@ class Content extends React.Component {
     const transaction = new Transaction();
     transaction.add(trxi);
 
-    let signers= [this.payAccount];
+    let signers= [this.playerAccount];
     sendAndConfirmTransaction(this.connection, transaction, signers, {
         skipPreflight: false,
         commitment: 'recent',
@@ -130,8 +163,8 @@ class Content extends React.Component {
 
   async onBuy() {
     let trxi = SolongLottery.createBuyInstruction(
-      this.payAccount.publicKey,
-      this.payAccount.publicKey,
+      this.playerAccount.publicKey,
+      this.feeAccountKey,
       this.poolAccount.publicKey,
       this.programID,
     );
@@ -139,7 +172,7 @@ class Content extends React.Component {
     const transaction = new Transaction();
     transaction.add(trxi);
 
-    let signers= [this.payAccount];
+    let signers= [this.playerAccount];
     sendAndConfirmTransaction(this.connection, transaction, signers, {
         skipPreflight: false,
         commitment: 'recent',
@@ -152,13 +185,13 @@ class Content extends React.Component {
   }
 
   async onInitialize() {
-    let poolSpace = 8+32+2+1000*(32+2);
-    let awardSpace = 1000*(32+13);
+    let poolSpace = Layout.poolSpace;
+    let awardSpace = Layout.awardSpace;
     let poolNeeded = await this.connection.getMinimumBalanceForRentExemption(poolSpace);
     let awardNeeded = await this.connection.getMinimumBalanceForRentExemption(awardSpace);
 
     const trxi0 =  SystemProgram.createAccount({
-      fromPubkey: this.payAccount.publicKey,
+      fromPubkey: this.adminAccount.publicKey,
       newAccountPubkey: this.billboardAccount.publicKey,
       lamports: awardNeeded,
       space: awardSpace,
@@ -167,7 +200,7 @@ class Content extends React.Component {
     console.log("award:", this.billboardAccount.publicKey.toBase58());
 
     const trxi1 =  SystemProgram.createAccount({
-      fromPubkey: this.payAccount.publicKey,
+      fromPubkey: this.adminAccount.publicKey,
       newAccountPubkey: this.poolAccount.publicKey,
       lamports: poolNeeded,
       space: poolSpace,
@@ -177,8 +210,8 @@ class Content extends React.Component {
 
 
     let trxi = SolongLottery.createInitializeInstruction(
-      this.payAccount.publicKey,
-      this.payAccount.publicKey,
+      this.adminAccount.publicKey,
+      this.feeAccountKey,
       this.billboardAccount.publicKey,
       this.poolAccount.publicKey,
       this.programID,
@@ -191,7 +224,7 @@ class Content extends React.Component {
     transaction.add(trxi1);
     transaction.add(trxi);
 
-    let signers= [this.payAccount, this.billboardAccount, this.poolAccount];
+    let signers= [this.adminAccount, this.billboardAccount, this.poolAccount];
     sendAndConfirmTransaction(this.connection, transaction, signers, {
         skipPreflight: false,
         commitment: 'recent',
