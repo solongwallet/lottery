@@ -181,3 +181,160 @@ impl Pack for AwardState {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_instruction_lottery_state() {
+        let check = LotteryState{
+            award:0u64,
+            fund:0u64,
+            price:0u64,
+            fee:Pubkey::new(&[0u8;32]),
+            billboard:Pubkey::new(&[0u8;32]),
+            pool: Vec::new(),
+        };
+        let mut packed = [0u8;LotteryState::LEN];
+        check.pack_into_slice(&mut packed);
+        let mut expect = Vec::new();
+        expect.extend_from_slice(&[0u8,0,0,0,0,0,0,0]);
+        expect.extend_from_slice(&[0u8,0,0,0,0,0,0,0]);
+        expect.extend_from_slice(&[0u8,0,0,0,0,0,0,0]);
+        expect.extend_from_slice(&[0u8;32]);
+        expect.extend_from_slice(&[0u8;32]);
+        expect.extend_from_slice(&[0u8;2]);
+        expect.extend_from_slice(&[0u8;LotteryState::LEN-(8+8+8+32+32+2)]);
+        assert_eq!(packed.to_vec(), expect);
+        let unpacked = LotteryState::unpack_from_slice(&expect).unwrap();
+        assert_eq!(unpacked, check); 
+
+
+        let check = LotteryState{
+            award:0u64,
+            fund:10_000_000_000u64,
+            price:1_000_000_000u64,
+            fee:Pubkey::new(&[1u8;32]),
+            billboard:Pubkey::new(&[2u8;32]),
+            pool: Vec::new(),
+        };
+        let mut packed = [0u8;LotteryState::LEN];
+        check.pack_into_slice(&mut packed);
+        let mut expect = Vec::new();
+        expect.extend_from_slice(&[0u8,0,0,0,0,0,0,0]);
+        expect.extend_from_slice(&[0, 228, 11, 84, 2, 0, 0, 0]);
+        expect.extend_from_slice(&[0, 202, 154, 59, 0, 0, 0, 0]);
+        expect.extend_from_slice(&[1u8;32]);
+        expect.extend_from_slice(&[2u8;32]);
+        expect.extend_from_slice(&[0u8;2]);
+        expect.extend_from_slice(&[0u8;LotteryState::LEN-(8+8+8+32+32+2)]);
+        assert_eq!(packed.to_vec(), expect);
+        let unpacked = LotteryState::unpack_from_slice(&expect).unwrap();
+        assert_eq!(unpacked, check); 
+
+        let mut pool = Vec::new();
+        let p = LotteryRecord {
+            account: Pubkey::new(&[3u8;32]),
+            amount:2u16,
+        };
+        pool.push(p);
+        let check = LotteryState{
+            award:0u64,
+            fund:10_000_000_000u64,
+            price:1_000_000_000u64,
+            fee:Pubkey::new(&[1u8;32]),
+            billboard:Pubkey::new(&[2u8;32]),
+            pool, 
+        };
+        let mut packed = [0u8;LotteryState::LEN];
+        check.pack_into_slice(&mut packed);
+        let mut expect = Vec::new();
+        expect.extend_from_slice(&[0u8,0,0,0,0,0,0,0]);
+        expect.extend_from_slice(&[0, 228, 11, 84, 2, 0, 0, 0]);
+        expect.extend_from_slice(&[0, 202, 154, 59, 0, 0, 0, 0]);
+        expect.extend_from_slice(&[1u8;32]);
+        expect.extend_from_slice(&[2u8;32]);
+        expect.extend_from_slice(&[1, 0]);
+        expect.extend_from_slice(&[3; 32]);
+        expect.extend_from_slice(&[2, 0]);
+        expect.extend_from_slice(&[0u8;LotteryState::LEN-(8+8+8+32+32+2)-34]);
+        assert_eq!(packed.to_vec(), expect);
+        let unpacked = LotteryState::unpack_from_slice(&expect).unwrap();
+        assert_eq!(unpacked, check); 
+    }
+
+    #[test]
+    fn test_instruction_award_state() {
+        let check = AwardState{
+            billboard: Vec::new(),
+        };
+        let mut packed = [0u8;AwardState::LEN];
+        check.pack_into_slice(&mut packed);
+        let mut expect = Vec::new();
+        expect.extend_from_slice(&[0u8;2]);
+        expect.extend_from_slice(&[0u8;AwardState::LEN-(2)]);
+        assert_eq!(packed.to_vec(), expect);
+        let unpacked = AwardState::unpack_from_slice(&expect).unwrap();
+        assert_eq!(unpacked, check);
+        
+        
+
+        let mut billboard = Vec::new();
+        let b = AwardBill {
+            account: Pubkey::new(&[0u8;32]),
+            award:0u64,
+            rewarded:false,
+        };
+        billboard.push(b);
+        let check = AwardState{
+            billboard,
+        };
+        let mut packed = [0u8;AwardState::LEN];
+        check.pack_into_slice(&mut packed);
+        let mut expect = Vec::new();
+        expect.extend_from_slice(&[1u8,0]);
+        expect.extend_from_slice(&[0;32]);
+        expect.extend_from_slice(&[0;8]);
+        expect.extend_from_slice(&[0]);
+        expect.extend_from_slice(&[0u8;AwardState::LEN-(2+41)]);
+        assert_eq!(packed.to_vec(), expect);
+        let unpacked = AwardState::unpack_from_slice(&expect).unwrap();
+        assert_eq!(unpacked, check); 
+
+        let mut billboard = Vec::new();
+        let b = AwardBill {
+            account: Pubkey::new(&[0u8;32]),
+            award:0u64,
+            rewarded:false,
+        };
+        billboard.push(b);
+        let b = AwardBill {
+            account: Pubkey::new(&[1u8;32]),
+            award:10_000_000_000u64,
+            rewarded:true,
+        };
+        billboard.push(b);
+
+
+        let check = AwardState{
+            billboard,
+        };
+        let mut packed = [0u8;AwardState::LEN];
+        check.pack_into_slice(&mut packed);
+        let mut expect = Vec::new();
+        expect.extend_from_slice(&[2u8,0]);
+        expect.extend_from_slice(&[0;32]);
+        expect.extend_from_slice(&[0;8]);
+        expect.extend_from_slice(&[0]);
+        expect.extend_from_slice(&[1;32]);
+        expect.extend_from_slice(&[0, 228, 11, 84, 2, 0, 0, 0]);
+        expect.extend_from_slice(&[1]);
+        expect.extend_from_slice(&[0u8;AwardState::LEN-(2+41*2)]);
+        assert_eq!(packed.to_vec(), expect);
+        let unpacked = AwardState::unpack_from_slice(&expect).unwrap();
+        assert_eq!(unpacked, check); 
+
+    }
+
+}
