@@ -44,7 +44,7 @@ impl IsInitialized for LotteryState {
     }
 }
 impl Pack for LotteryState {
-    const LEN: usize = 8+32+2+1000*(32+2);
+    const LEN: usize = 8+8+8+32+32+2+1000*(32+2);
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         let award_buf = array_ref![src, 0, 8];
         let award =  u64::from_le_bytes(*award_buf);
@@ -135,7 +135,7 @@ impl IsInitialized for AwardState {
     }
 }
 impl Pack for AwardState {
-    const LEN: usize = 1000*(32+13);
+    const LEN: usize = 1000*(32+9);
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         let mut billboard = Vec::new();
         let count_buf = array_ref![src, 0, 2];

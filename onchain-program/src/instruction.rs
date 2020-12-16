@@ -36,7 +36,7 @@ pub enum LotteryInstruction {
 
 
 impl LotteryInstruction {
-    /// Unpacks a byte buffer into a [RegistryInstruction](enum.RegistryInstruction.html).
+    /// Unpacks a byte buffer into a [LotteryInstruction](enum.LotteryInstruction.html).
     pub fn unpack(input: &[u8]) -> Result<Self, ProgramError> {
         use LotteryError::InvalidInstruction;
 
@@ -59,7 +59,7 @@ impl LotteryInstruction {
     }
 
 
-    /// Packs a [RegistryInstruction](enum.RegistryInstruction.html) into a byte buffer.
+    /// Packs a [LotteryInstruction](enum.LotteryInstruction.html) into a byte buffer.
     pub fn pack(&self) -> Vec<u8> {
         let mut buf : Vec<u8>;
         let self_len= size_of::<Self>();
@@ -111,5 +111,110 @@ impl LotteryInstruction {
         } else {
             Err(LotteryError::InvalidInstruction.into())
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_instruction_initialize() {
+        let check = LotteryInstruction::Initialize{
+            fund:0u64,
+            price:0u64,
+        };
+        let packed = check.pack();
+        let mut expect = Vec::new();
+        expect.extend_from_slice(&[1]);
+        expect.extend_from_slice(&[0,0,0,0,0,0,0,0]);
+        expect.extend_from_slice(&[0,0,0,0,0,0,0,0]);
+        assert_eq!(packed, expect);
+        let unpacked = LotteryInstruction::unpack(&expect).unwrap();
+        assert_eq!(unpacked, check); 
+
+        let check = LotteryInstruction::Initialize{
+            fund:9527u64,
+            price:0u64,
+        };
+        let packed = check.pack();
+        let mut expect = Vec::new();
+        expect.extend_from_slice(&[1]);
+        expect.extend_from_slice(&[55, 37, 0, 0, 0, 0, 0, 0]);
+        expect.extend_from_slice(&[0,0,0,0,0,0,0,0]);
+        assert_eq!(packed, expect);
+        let unpacked = LotteryInstruction::unpack(&expect).unwrap();
+        assert_eq!(unpacked, check); 
+
+        let check = LotteryInstruction::Initialize{
+            fund:10_000_000_000u64,
+            price:0u64,
+        };
+        let packed = check.pack();
+        let mut expect = Vec::new();
+        expect.extend_from_slice(&[1]);
+        expect.extend_from_slice(&[0, 228, 11, 84, 2, 0, 0, 0]);
+        expect.extend_from_slice(&[0,0,0,0,0,0,0,0]);
+        assert_eq!(packed, expect);
+        let unpacked = LotteryInstruction::unpack(&expect).unwrap();
+        assert_eq!(unpacked, check); 
+
+        let check = LotteryInstruction::Initialize{
+            fund:10_000_000_000u64,
+            price:1_000_000_000u64,
+        };
+        let packed = check.pack();
+        let mut expect = Vec::new();
+        expect.extend_from_slice(&[1]);
+        expect.extend_from_slice(&[0, 228, 11, 84, 2, 0, 0, 0]);
+        expect.extend_from_slice(&[0, 202, 154, 59, 0, 0, 0, 0]);
+        assert_eq!(packed, expect);
+        let unpacked = LotteryInstruction::unpack(&expect).unwrap();
+        assert_eq!(unpacked, check); 
+
+    }
+
+    #[test]
+    fn test_instruction_signin() {
+        let check = LotteryInstruction::SignIn;
+        let packed = check.pack();
+        let mut expect = Vec::new();
+        expect.extend_from_slice(&[2]);
+        assert_eq!(packed, expect);
+        let unpacked = LotteryInstruction::unpack(&expect).unwrap();
+        assert_eq!(unpacked, check); 
+    }
+
+    #[test]
+    fn test_instruction_buy() {
+        let check = LotteryInstruction::Buy;
+        let packed = check.pack();
+        let mut expect = Vec::new();
+        expect.extend_from_slice(&[3]);
+        assert_eq!(packed, expect);
+        let unpacked = LotteryInstruction::unpack(&expect).unwrap();
+        assert_eq!(unpacked, check); 
+    }
+
+    #[test]
+    fn test_instruction_roll() {
+        let check = LotteryInstruction::Roll;
+        let packed = check.pack();
+        let mut expect = Vec::new();
+        expect.extend_from_slice(&[4]);
+        assert_eq!(packed, expect);
+        let unpacked = LotteryInstruction::unpack(&expect).unwrap();
+        assert_eq!(unpacked, check); 
+    }
+
+    #[test]
+    fn test_instruction_reward() {
+        let check = LotteryInstruction::Reward;
+        let packed = check.pack();
+        let mut expect = Vec::new();
+        expect.extend_from_slice(&[5]);
+        assert_eq!(packed, expect);
+        let unpacked = LotteryInstruction::unpack(&expect).unwrap();
+        assert_eq!(unpacked, check); 
     }
 }

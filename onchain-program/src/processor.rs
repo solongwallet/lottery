@@ -238,9 +238,11 @@ impl Processor {
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let system_program_info= next_account_info(account_info_iter)?;
+        let admin_info = next_account_info(account_info_iter)?;
         let account_info= next_account_info(account_info_iter)?;
         let award_info = next_account_info(account_info_iter)?;
-        let program_info = next_account_info(account_info_iter)?;
+
+        // check admin permission
         
         let mut award= AwardState::unpack_unchecked(&award_info.data.borrow())?;
 
@@ -252,12 +254,12 @@ impl Processor {
                 log_info("before send award");
                 invoke(
                     &system_instruction::transfer(
-                        program_info.key,
+                        admin_info.key,
                         account_info.key,
                         val.award,
                     ),
                     &[
-                        program_info.clone(),
+                        admin_info.clone(),
                         account_info.clone(),
                         system_program_info.clone(),
                     ],

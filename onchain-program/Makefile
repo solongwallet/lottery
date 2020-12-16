@@ -15,5 +15,6 @@ $(TARGET): $(SRC_FILES)
 	@echo "src :"$(SRC_FILES)
 	cargo build-bpf
 
-test:
-	@echo $(SRC_FILES)
+test: $(SRC_FILES)
+	clear
+	cargo test-bpf
