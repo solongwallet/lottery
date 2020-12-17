@@ -32,6 +32,10 @@ pub enum LotteryError {
     #[error("Invalid account length")]
     InvalidAccountLength,
 
+    /// Already signin
+    #[error("Already signin")]
+    AlreadySignin, 
+
     /// TestError 
     #[error("TestError")]
     TestError,
@@ -59,6 +63,7 @@ impl PrintProgramError for LotteryError {
             LotteryError::InsufficentFunds => msg!("Insufficent funds"),
             LotteryError::InvalidPermission=> msg!("Invalid permission"),
             LotteryError::InvalidAccountLength=> msg!("Invalid account length"),
+            LotteryError::AlreadySignin=> msg!("Already signin"),
             LotteryError::TestError => msg!("TestError"),
         }
     }

@@ -115,6 +115,9 @@ impl Processor {
                 val.amount += 1;
                 log_info(&format!("account:{} lottery:{}", val.account, val.amount));
                 founded = true;
+                if val.signin {
+                    return Err(LotteryError::AlreadySignin.into());
+                }
                 break;
             }
         }
@@ -122,6 +125,7 @@ impl Processor {
             lottery.pool.push(LotteryRecord{
                 account: *account_info.key,
                 amount: 1,
+                signin: true,
             });
         }
         LotteryState::pack(lottery, &mut pool_info.data.borrow_mut())?;
@@ -168,6 +172,7 @@ impl Processor {
             lottery.pool.push(LotteryRecord{
                 account: *account_info.key,
                 amount: 1,
+                signin: false,
             });
         }
         LotteryState::pack(lottery, &mut pool_info.data.borrow_mut())?;
