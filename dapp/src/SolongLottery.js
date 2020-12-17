@@ -249,8 +249,9 @@ export class SolongLottery {
                     console.log("Player count:", playerCount);
                     let players = new Map();
                     for(let i=0; i< playerCount; i++) {
-                        const playerAccountKey =  new PublicKey(pool.slice(90,122)).toBase58(); 
-                        const playerLottery =  intFromBytes(pool.slice(122,124));
+                        const offset = 90+i*35;
+                        const playerAccountKey =  new PublicKey(pool.slice(offset,offset+32)).toBase58(); 
+                        const playerLottery =  intFromBytes(pool.slice(offset+32,offset+32+2));
                         players.set(playerAccountKey, playerLottery);
                     }
 
