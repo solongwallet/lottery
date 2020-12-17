@@ -16,17 +16,16 @@ use solana_program::{
     clock::Clock,
     sysvar::Sysvar,
 };
+use std::str::FromStr;
 
 
 /// Program state handler.
 pub struct Processor {}
 impl Processor {
-
+    const ADMIN_KEY: &'static str = "4n3CDb6jtrbsChMVUSbnARknv1S6wCTN1bRWqopfH35B";
     /// Processes an [Instruction](enum.Instruction.html).
     pub fn process(program_id: &Pubkey, accounts: &[AccountInfo], input: &[u8]) -> ProgramResult {
-        log_info("process program:");
         let instruction = LotteryInstruction::unpack(input)?;
-
         match instruction {
             LotteryInstruction::Initialize{
                 fund,
@@ -73,7 +72,9 @@ impl Processor {
         let billboard_info= next_account_info(account_info_iter)?;
 
         //check permission first
-        // TODO: add equal check for admin_info.key
+        if Pubkey::from_str(Self::ADMIN_KEY).unwrap() != *admin_info.key {
+            return Err(LotteryError::InvalidPermission.into());
+        }
         if billboard_info.owner != program_id ||
             pool_info.owner != program_id ||
             !admin_info.is_signer{
@@ -94,6 +95,11 @@ impl Processor {
         lottery.billboard = *billboard_info.key;
         lottery.pool.clear();
         LotteryState::pack(lottery, &mut pool_info.data.borrow_mut())?;
+
+        let mut award= AwardState::unpack_unchecked(&billboard_info.data.borrow())?;
+        award.billboard.clear();
+        AwardState::pack(award, &mut billboard_info.data.borrow_mut())?;
+
         Ok(())
     }
 
@@ -105,7 +111,11 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let account_info= next_account_info(account_info_iter)?;
         let pool_info= next_account_info(account_info_iter)?;
-        log_info(&format!("pool:{} account:{}", pool_info.key, account_info.key));
+
+        if pool_info.data_len() != LotteryState::LEN {
+            return Err(LotteryError::InvalidAccountLength.into());
+        }
+    
         let mut lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
         log_info(&format!("process_signin lottery:award[{}] fund[{}] price[{}] fee[{}] billboard[{}] pool[{}]",
                 lottery.award, lottery.fund, lottery.price, lottery.fee, lottery.billboard, lottery.pool.len()));
@@ -113,7 +123,7 @@ impl Processor {
         for val in &mut lottery.pool{
             if val.account == *account_info.key {
                 val.amount += 1;
-                log_info(&format!("account:{} lottery:{}", val.account, val.amount));
+                log_info(&format!("found account:{} lottery:{}", val.account, val.amount));
                 founded = true;
                 if val.signin {
                     return Err(LotteryError::AlreadySignin.into());
@@ -140,16 +150,46 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let system_program_info= next_account_info(account_info_iter)?;
         let account_info= next_account_info(account_info_iter)?;
+        let admin_info= next_account_info(account_info_iter)?;
         let fee_info= next_account_info(account_info_iter)?;
         let pool_info= next_account_info(account_info_iter)?;
 
+        // check pool data length first 
+        // check fee then 
+        if pool_info.data_len() != LotteryState::LEN {
+            return Err(LotteryError::InvalidAccountLength.into());
+        }
+        let mut lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
+        if *fee_info.key != lottery.fee {
+            return Err(LotteryError::InvaliedFee.into());
+        }
+
+        // check balance
+        if account_info.lamports() < 1000_000_000 {
+            return Err(LotteryError::LowBalance.into());
+        }
+
         let price_lamports = 1000_000_000;
-        // need not check balance Cau'z it will fail
+        // send to admin
+        invoke(
+            &system_instruction::transfer(
+                account_info.key,
+                admin_info.key,
+                price_lamports*9/10,
+            ),
+            &[
+                account_info.clone(),
+                admin_info.clone(),
+                system_program_info.clone(),
+            ],
+        )?;
+
+        // send to fee
         invoke(
             &system_instruction::transfer(
                 account_info.key,
                 fee_info.key,
-                price_lamports,
+                price_lamports*1/10,
             ),
             &[
                 account_info.clone(),
@@ -158,8 +198,8 @@ impl Processor {
             ],
         )?;
 
-        let mut  lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
-        lottery.award +=1000_000_000;
+
+        lottery.award +=price_lamports*9/10;
         let mut founded = false;
         for val in &mut lottery.pool{
             if val.account == *account_info.key {
@@ -181,19 +221,32 @@ impl Processor {
 
     /// Processes an [Initialize](enum.Instruction.html).
     pub fn process_roll(
-        _program_id: &Pubkey,
+        program_id: &Pubkey,
         accounts: &[AccountInfo],
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let clock_sysvar_info = next_account_info(account_info_iter)?;
-        let _admin_info = next_account_info(account_info_iter)?;
+        let admin_info = next_account_info(account_info_iter)?;
         let pool_info= next_account_info(account_info_iter)?;
         let award_info = next_account_info(account_info_iter)?;
-
         let clock = &Clock::from_account_info(clock_sysvar_info)?;
         
+        //check permission first
+        if Pubkey::from_str(Self::ADMIN_KEY).unwrap() != *admin_info.key {
+            return Err(LotteryError::InvalidPermission.into());
+        }
+        if award_info.owner != program_id ||
+            pool_info.owner != program_id ||
+            !admin_info.is_signer{
+            return Err(LotteryError::InvalidPermission.into());
+        } 
 
-        //TODO: check permission first
+        // check account's data length
+        if pool_info.data_len() != LotteryState::LEN ||
+            award_info.data_len() != AwardState::LEN{
+            return Err(LotteryError::InvalidAccountLength.into());
+        }
+
 
         let mut lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
         if lottery.pool.len() == 0 {
@@ -238,7 +291,7 @@ impl Processor {
 
     /// Processes an [Initialize](enum.Instruction.html).
     pub fn process_reward(
-        _program_id: &Pubkey,
+        program_id: &Pubkey,
         accounts: &[AccountInfo],
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
@@ -247,7 +300,19 @@ impl Processor {
         let account_info= next_account_info(account_info_iter)?;
         let award_info = next_account_info(account_info_iter)?;
 
-        // check admin permission
+        //check permission first
+        if Pubkey::from_str(Self::ADMIN_KEY).unwrap() != *admin_info.key {
+            return Err(LotteryError::InvalidPermission.into());
+        }
+        if award_info.owner != program_id ||
+            !admin_info.is_signer{
+            return Err(LotteryError::InvalidPermission.into());
+        } 
+
+        // check account's data length
+        if award_info.data_len() != AwardState::LEN{
+            return Err(LotteryError::InvalidAccountLength.into());
+        }
         
         let mut award= AwardState::unpack_unchecked(&award_info.data.borrow())?;
 

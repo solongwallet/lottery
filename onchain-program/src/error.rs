@@ -36,6 +36,14 @@ pub enum LotteryError {
     #[error("Already signin")]
     AlreadySignin, 
 
+    /// Invalied fee account
+    #[error("Invalied fee account")]
+    InvaliedFee, 
+
+    /// Low balance for 1 SOL
+    #[error("Low balance for 1 SOL")]
+    LowBalance, 
+
     /// TestError 
     #[error("TestError")]
     TestError,
@@ -64,6 +72,8 @@ impl PrintProgramError for LotteryError {
             LotteryError::InvalidPermission=> msg!("Invalid permission"),
             LotteryError::InvalidAccountLength=> msg!("Invalid account length"),
             LotteryError::AlreadySignin=> msg!("Already signin"),
+            LotteryError::InvaliedFee=> msg!("Invalied fee account"),
+            LotteryError::LowBalance=> msg!("Low balance for 1 SOL"),
             LotteryError::TestError => msg!("TestError"),
         }
     }
