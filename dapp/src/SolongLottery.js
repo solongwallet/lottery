@@ -108,6 +108,7 @@ export class SolongLottery {
      */
     static createBuyInstruction(
         playerAccountKey,
+        adminAccountKey,
         feeAccountKey,
         poolAccountKey,
         programID,
@@ -128,6 +129,7 @@ export class SolongLottery {
         let keys = [
             {pubkey: SystemProgram.programId, isSigner: false, isWritable: true},
             {pubkey: playerAccountKey, isSigner: true, isWritable: true},
+            {pubkey: adminAccountKey, isSigner: false, isWritable: true},
             {pubkey: feeAccountKey, isSigner: false, isWritable: true},
             {pubkey: poolAccountKey, isSigner: false, isWritable: true},
         ];
@@ -208,7 +210,6 @@ export class SolongLottery {
             {pubkey: adminAccountKey, isSigner: true, isWritable: true},
             {pubkey: playerAccountKey, isSigner: false, isWritable: true},
             {pubkey: billboardAccountKey, isSigner: false, isWritable: true},
-            {pubkey: programID, isSigner: false, isWritable: true},
         ];
 
         const  trxi = new TransactionInstruction({
@@ -237,16 +238,16 @@ export class SolongLottery {
             resp.result.forEach( result =>{
                 const pubkey = result.pubkey;
                 if (pubkey ==  poolAccountKey.toBase58()) {
-                    console.log("result:",result)
+                    //console.log("result:",result)
                     const pool_buf = result.account.data[0];
                     const pool = Buffer.from(pool_buf, 'base64');
-                    console.log("pool:", pool);
+                    //console.log("pool:", pool);
                     const award = intFromBytes(pool.slice(0,8));
                     const fund = intFromBytes(pool.slice(8,16));
                     const price = intFromBytes(pool.slice(16,24));
                     const feeAccountKey = new PublicKey(pool.slice(24,56)).toBase58();
                     const playerCount = intFromBytes(pool.slice(88,90));
-                    console.log("Player count:", playerCount);
+                    //console.log("Player count:", playerCount);
                     let players = new Map();
                     for(let i=0; i< playerCount; i++) {
                         const offset = 90+i*35;
@@ -285,17 +286,18 @@ export class SolongLottery {
             }
         ])
         let billboard = [];
+        //console.log("resp:", resp);
         if (resp.result && resp.result.length > 0 ) {
             resp.result.forEach( result =>{
                 const pubkey = result.pubkey;
                 if (pubkey ==  billboardAccountKey.toBase58()) {
-                    console.log("result:",result)
+                    //console.log("result:",result)
                     const pool_buf = result.account.data[0];
                     const pool = Buffer.from(pool_buf, 'base64');
-                    console.log("pool:", pool);
+                    //console.log("pool:", pool);
                     
                     const awardCount = intFromBytes(pool.slice(0,2));
-                    console.log("awardCount count:", awardCount);
+                    //console.log("awardCount count:", awardCount);
                     for(let i=0; i< awardCount; i++) {
                         const index = 2+(32+9)*i;
                         const key =  new PublicKey(pool.slice(index,index+32)); 
