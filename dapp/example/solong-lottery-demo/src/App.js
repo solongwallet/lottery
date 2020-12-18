@@ -82,8 +82,7 @@ class Content extends React.Component {
   async onQueryPool() {
     SolongLottery.GetLotteryPool(this.connection, 
       //this.poolAccountKey,
-      this.poolAccount.publicKey,
-      this.programID).then((pool)=>{
+      this.poolAccount.publicKey).then((pool)=>{
           console.log("pool:", pool);
       });
   }
@@ -91,8 +90,7 @@ class Content extends React.Component {
   async onQueryBillboard() {
     SolongLottery.GetBillboard(this.connection, 
       //this.billboardAccountKey,
-      this.billboardAccount.publicKey,
-      this.programID).then((pool)=>{
+      this.billboardAccount.publicKey).then((pool)=>{
           console.log("award:", pool);
       });
   }
