@@ -164,12 +164,12 @@ impl Processor {
             return Err(LotteryError::InvaliedFee.into());
         }
 
+        let price_lamports = lottery.price;
         // check balance
-        if account_info.lamports() < 1000_000_000 {
+        if account_info.lamports() < price_lamports{
             return Err(LotteryError::LowBalance.into());
         }
 
-        let price_lamports = 1000_000_000;
         // send to admin
         invoke(
             &system_instruction::transfer(
