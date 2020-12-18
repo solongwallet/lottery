@@ -278,6 +278,7 @@ impl Processor {
             account: winner,
             award: lottery.award + lottery.fund,
             rewarded: false,
+            timestamp:clock.unix_timestamp,
         };
         award.billboard.push(bill);
         AwardState::pack(award, &mut award_info.data.borrow_mut())?;

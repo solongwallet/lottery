@@ -7,6 +7,7 @@ use solana_program::{
     program_error::ProgramError,
     program_pack::{IsInitialized, Pack, Sealed},
     pubkey::Pubkey,
+    clock::UnixTimestamp,
 };
 
 /// LotteryRecord 
@@ -132,6 +133,8 @@ pub struct AwardBill{
     pub award: u64,
     /// if winner has rewarded
     pub rewarded: bool,
+    /// timestamp for this
+    pub timestamp:UnixTimestamp,
 }
 
 /// AwardState data.
@@ -149,24 +152,27 @@ impl IsInitialized for AwardState {
     }
 }
 impl Pack for AwardState {
-    const LEN: usize = 1000*(32+9);
+    const LEN: usize = 2+1000*(32+8+1+8);
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         let mut billboard = Vec::new();
         let count_buf = array_ref![src, 0, 2];
         let count =  u16::from_le_bytes(*count_buf);
         for i in 0..count {
             let i = i as usize;
-            let offset:usize = 2+i*(32+9) ;
+            let offset:usize = 2+i*(32+8+1+8) ;
             let account_buf = array_ref![src,offset, 32];
             let account= Pubkey::new_from_array(*account_buf);
             let award_buf= array_ref![src,offset+32, 8];
             let award = u64::from_le_bytes(*award_buf);
             let rewarded_buf = array_ref![src,offset+40, 1];
             let rewarded = rewarded_buf[0] != 0;
+            let timestamp_buf= array_ref![src,offset+41, 8];
+            let timestamp= UnixTimestamp::from_le_bytes(*timestamp_buf);
             billboard.push(AwardBill{
                 account,
                 award,
-                rewarded
+                rewarded,
+                timestamp,
             });
         }
 
@@ -180,7 +186,7 @@ impl Pack for AwardState {
         count_buf.copy_from_slice(&count.to_le_bytes());
         let mut i:usize=0;
         for val in &self.billboard{
-            let offset:usize = 2+i*(32+9);
+            let offset:usize = 2+i*(32+8+1+8);
             let account_buf = array_mut_ref![dst, offset, 32];
             account_buf.copy_from_slice(val.account.as_ref());
             let award_buf = array_mut_ref![dst, offset+32, 8];
@@ -191,6 +197,8 @@ impl Pack for AwardState {
             } else {
                 reward_buf[0] = 0;
             }
+            let timestamp_buf = array_mut_ref![dst, offset+41, 8];
+            timestamp_buf.copy_from_slice(&val.timestamp.to_le_bytes());
             i += 1;
         }
     }
@@ -344,6 +352,7 @@ mod test {
             account: Pubkey::new(&[0u8;32]),
             award:0u64,
             rewarded:false,
+            timestamp:0,
         };
         billboard.push(b);
         let check = AwardState{
@@ -356,7 +365,8 @@ mod test {
         expect.extend_from_slice(&[0;32]);
         expect.extend_from_slice(&[0;8]);
         expect.extend_from_slice(&[0]);
-        expect.extend_from_slice(&[0u8;AwardState::LEN-(2+41)]);
+        expect.extend_from_slice(&[0;8]);
+        expect.extend_from_slice(&[0u8;AwardState::LEN-(2+49)]);
         assert_eq!(packed.to_vec(), expect);
         let unpacked = AwardState::unpack_from_slice(&expect).unwrap();
         assert_eq!(unpacked, check); 
@@ -366,12 +376,14 @@ mod test {
             account: Pubkey::new(&[0u8;32]),
             award:0u64,
             rewarded:false,
+            timestamp: 1608273769,
         };
         billboard.push(b);
         let b = AwardBill {
             account: Pubkey::new(&[1u8;32]),
             award:10_000_000_000u64,
             rewarded:true,
+            timestamp: 1608273769,
         };
         billboard.push(b);
 
@@ -386,10 +398,12 @@ mod test {
         expect.extend_from_slice(&[0;32]);
         expect.extend_from_slice(&[0;8]);
         expect.extend_from_slice(&[0]);
+        expect.extend_from_slice(&[105, 79, 220, 95, 0, 0, 0, 0]);
         expect.extend_from_slice(&[1;32]);
         expect.extend_from_slice(&[0, 228, 11, 84, 2, 0, 0, 0]);
         expect.extend_from_slice(&[1]);
-        expect.extend_from_slice(&[0u8;AwardState::LEN-(2+41*2)]);
+        expect.extend_from_slice(&[105, 79, 220, 95, 0, 0, 0, 0]);
+        expect.extend_from_slice(&[0u8;AwardState::LEN-(2+49*2)]);
         assert_eq!(packed.to_vec(), expect);
         let unpacked = AwardState::unpack_from_slice(&expect).unwrap();
         assert_eq!(unpacked, check); 
