@@ -34,10 +34,12 @@ class Content extends React.Component {
 
     this.adminAccount = new Account(this.adminPrivKey);
     this.playerAccount = new Account(this.playerPrivKey);
-    this.programID = new PublicKey('D57EVo8UfKmCpKoUAbBtG3HRhecWafThUfKrq2JNPfFJ');
+    this.programID = new PublicKey('CuEY6pT5eJwZx8JUwaV15rFXo72gvSLyyusRKDo8aYWj');
     this.feeAccountKey = new PublicKey('AAe9zTZYBne6zjshfQARygr51yQx7R36eSSiwieWHXyH');
     this.billboardAccount = new Account();
     this.poolAccount = new Account(); 
+    this.billboardAccountKey = new PublicKey("4FG8zFDyy3m7jLVmqQ8MyViX9LJXkccE88QPqRZa9X6c");
+    this.poolAccountKey = new PublicKey("DAjNHQ3aVSKCbFKwzUKVoM3RqU3WhVUuC9xpC8foRmuW"); 
   }
 
 
@@ -79,16 +81,16 @@ class Content extends React.Component {
 
   async onQueryPool() {
     SolongLottery.GetLotteryPool(this.connection, 
-      this.poolAccount.publicKey,
-      this.programID).then((pool)=>{
+      //this.poolAccountKey,
+      this.poolAccount.publicKey).then((pool)=>{
           console.log("pool:", pool);
       });
   }
 
   async onQueryBillboard() {
     SolongLottery.GetBillboard(this.connection, 
-      new PublicKey("E1WeVyhZbdm7D9HPGdqweiDLBp3HXUf2hJuJKk8htQPN"),
-      this.programID).then((pool)=>{
+      //this.billboardAccountKey,
+      this.billboardAccount.publicKey).then((pool)=>{
           console.log("award:", pool);
       });
   }
@@ -96,7 +98,9 @@ class Content extends React.Component {
   async onRoll() {
     let trxi = SolongLottery.createRollInstruction(
       this.adminAccount.publicKey,
+      //this.poolAccountKey,
       this.poolAccount.publicKey,
+      //this.billboardAccountKey,
       this.billboardAccount.publicKey,
       this.programID,
     );
@@ -120,6 +124,7 @@ class Content extends React.Component {
     let trxi = SolongLottery.createRewardInstruction(
       this.adminAccount.publicKey,
       this.playerAccount.publicKey,
+      //this.billboardAccountKey,
       this.billboardAccount.publicKey,
       this.programID,
     );
@@ -142,6 +147,7 @@ class Content extends React.Component {
   async onSign() {
     let trxi = SolongLottery.createSignInstruction(
       this.playerAccount.publicKey,
+      //this.poolAccountKey,
       this.poolAccount.publicKey,
       this.programID,
     );
@@ -164,7 +170,9 @@ class Content extends React.Component {
   async onBuy() {
     let trxi = SolongLottery.createBuyInstruction(
       this.playerAccount.publicKey,
+      this.adminAccount.publicKey,
       this.feeAccountKey,
+      //this.poolAccountKey,
       this.poolAccount.publicKey,
       this.programID,
     );
@@ -185,6 +193,7 @@ class Content extends React.Component {
   }
 
   async onInitialize() {
+    //return null;
     let poolSpace = Layout.poolSpace;
     let awardSpace = Layout.awardSpace;
     let poolNeeded = await this.connection.getMinimumBalanceForRentExemption(poolSpace);
@@ -215,7 +224,7 @@ class Content extends React.Component {
       this.billboardAccount.publicKey,
       this.poolAccount.publicKey,
       this.programID,
-      10000000000,
+      1000000000,
       1000000000,
     );
 

@@ -10,7 +10,7 @@ export function publicKey(property) {
 }
 
 export const poolSpace = 8+8+8+32+32+2+1000*(32+2+1);
-export const awardSpace = 1000*(32+9);
+export const awardSpace = 2+1000*(32+8+1+8);
 
 /**
  * Layout for LotteryInitState 
