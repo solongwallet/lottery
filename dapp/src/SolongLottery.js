@@ -299,19 +299,19 @@ export class SolongLottery {
                     const awardCount = intFromBytes(pool.slice(0,2));
                     //console.log("awardCount count:", awardCount);
                     for(let i=0; i< awardCount; i++) {
-                        const index = 2+(32+9)*i;
+                        const index = 2+(32+8+1+8)*i;
                         const key =  new PublicKey(pool.slice(index,index+32)); 
                         const award =  intFromBytes(pool.slice(index+32,index+40));
                         const reward =  pool.slice(index+40,index+41)[0];
+                        const timestamp =  intFromBytes(pool.slice(index+41,index+49));
                         const record = {
                             account:key.toBase58(),
                             award: award,
                             reward:reward,
+                            timestamp:timestamp,
                         };
                         billboard.push(record)
                     }
-
-
                     console.log("billboard:", billboard);
                 }
             });
