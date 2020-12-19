@@ -27,8 +27,7 @@ export class SolongLottery {
      *
      */
     static createInitializeInstruction(
-        ownerAccountKey,
-        feeAccountKey,
+        adminAccountKey,
         billboardAccountKey,
         poolAccountKey,
         programID,
@@ -53,8 +52,7 @@ export class SolongLottery {
         );
       
         let keys = [
-            {pubkey: ownerAccountKey, isSigner: false, isWritable: true},
-            {pubkey: feeAccountKey, isSigner: false, isWritable: true},
+            {pubkey: adminAccountKey, isSigner: false, isWritable: true},
             {pubkey: poolAccountKey, isSigner: false, isWritable: true},
             {pubkey: billboardAccountKey, isSigner: false, isWritable: true},
         ];
@@ -103,34 +101,36 @@ export class SolongLottery {
     }
 
     /**
-     * Construct an  buy instruction
+     * Construct an  gm instruction
      *
      */
-    static createBuyInstruction(
-        playerAccountKey,
+    static createGMInstruction(
         adminAccountKey,
-        feeAccountKey,
         poolAccountKey,
         programID,
+        fund,
+        price
     ) {
+
 
         const dataLayout = BufferLayout.struct([
             BufferLayout.u8("i"),
+            BufferLayout.blob(8,"fund"),
+            BufferLayout.blob(8,"price"),
         ]);
       
         const data = Buffer.alloc(dataLayout.span);
         dataLayout.encode(
             {
-              i:3, // buy instruct 
+              i:3, // gm instruct 
+              fund:new u64(fund).toBuffer(),
+              price:new u64(price).toBuffer(),
             },
             data,
         );
       
         let keys = [
-            {pubkey: SystemProgram.programId, isSigner: false, isWritable: true},
-            {pubkey: playerAccountKey, isSigner: true, isWritable: true},
-            {pubkey: adminAccountKey, isSigner: false, isWritable: true},
-            {pubkey: feeAccountKey, isSigner: false, isWritable: true},
+            {pubkey: adminAccountKey, isSigner: true, isWritable: true},
             {pubkey: poolAccountKey, isSigner: false, isWritable: true},
         ];
 
@@ -242,12 +242,11 @@ export class SolongLottery {
             const award = intFromBytes(pool.slice(0,8));
             const fund = intFromBytes(pool.slice(8,16));
             const price = intFromBytes(pool.slice(16,24));
-            const feeAccountKey = new PublicKey(pool.slice(24,56)).toBase58();
-            const playerCount = intFromBytes(pool.slice(88,90));
+            const playerCount = intFromBytes(pool.slice(56,58));
             //console.log("Player count:", playerCount);
             let players = new Map();
             for(let i=0; i< playerCount; i++) {
-                const offset = 90+i*35;
+                const offset = 58+i*35;
                 const playerAccountKey =  new PublicKey(pool.slice(offset,offset+32)).toBase58(); 
                 const playerLottery =  intFromBytes(pool.slice(offset+32,offset+32+2));
                 players.set(playerAccountKey, playerLottery);
@@ -257,7 +256,6 @@ export class SolongLottery {
                 award:award,
                 fund:fund,
                 price:price,
-                feeAccountKey:feeAccountKey,
                 players:players,
             };
             console.log("lottery:", lottery);
