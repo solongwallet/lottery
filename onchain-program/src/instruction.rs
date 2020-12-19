@@ -22,10 +22,15 @@ pub enum LotteryInstruction {
     }, 
 
     /// SignIn Instruction
-    SignIn,
+    SignIn ,
 
-    /// Buy Instrcution
-    Buy,
+    /// Game Manager command
+    GM {
+        /// fund from solong
+        fund : u64,
+        /// price of lottery , unit lamports
+        price : u64,
+    },
 
     /// Roll Instruction
     Roll,
@@ -51,7 +56,14 @@ impl LotteryInstruction {
                 }
             } 
             2 => Self::SignIn,
-            3 => Self::Buy,
+            3 => {
+                let (fund, rest) = Self::unpack_u64(rest)?;
+                let (price, _) = Self::unpack_u64(rest)?;
+                Self::GM{
+                    fund,
+                    price
+                }
+            }
             4 => Self::Roll,
             5 => Self::Reward,
             _ => return Err(LotteryError::InvalidInstruction.into()),
@@ -79,9 +91,14 @@ impl LotteryInstruction {
                 buf.push(2); 
             }
 
-            Self::Buy=> {
+            Self::GM {
+                fund,
+                price,    
+            }=> {
                 buf = Vec::with_capacity(self_len);
                 buf.push(3); 
+                buf.extend_from_slice(&fund.to_le_bytes());
+                buf.extend_from_slice(&price.to_le_bytes());
             }
 
             Self::Roll=> {
@@ -96,8 +113,6 @@ impl LotteryInstruction {
         };
         buf
     }    
-
-
 
     fn unpack_u64(input: &[u8]) -> Result<(u64, &[u8]), ProgramError> {
         if input.len() >= 8 {
@@ -186,11 +201,44 @@ mod test {
     }
 
     #[test]
-    fn test_instruction_buy() {
-        let check = LotteryInstruction::Buy;
+    fn test_instruction_gm() {
+
+        let check = LotteryInstruction::Initialize{
+            fund:0u64,
+            price:0u64,
+        };
+        let packed = check.pack();
+        let mut expect = Vec::new();
+        expect.extend_from_slice(&[1]);
+        expect.extend_from_slice(&[0,0,0,0,0,0,0,0]);
+        expect.extend_from_slice(&[0,0,0,0,0,0,0,0]);
+        assert_eq!(packed, expect);
+        let unpacked = LotteryInstruction::unpack(&expect).unwrap();
+        assert_eq!(unpacked, check);
+
+        let check = LotteryInstruction::GM{
+            fund:0u64,
+            price:0u64,
+        };
         let packed = check.pack();
         let mut expect = Vec::new();
         expect.extend_from_slice(&[3]);
+        expect.extend_from_slice(&[0,0,0,0,0,0,0,0]);
+        expect.extend_from_slice(&[0,0,0,0,0,0,0,0]);
+        assert_eq!(packed, expect);
+        let unpacked = LotteryInstruction::unpack(&expect).unwrap();
+        assert_eq!(unpacked, check); 
+
+
+        let check = LotteryInstruction::GM{
+            fund:10_000_000_000u64,
+            price:1_000_000_000u64,
+        };
+        let packed = check.pack();
+        let mut expect = Vec::new();
+        expect.extend_from_slice(&[3]);
+        expect.extend_from_slice(&[0, 228, 11, 84, 2, 0, 0, 0]);
+        expect.extend_from_slice(&[0, 202, 154, 59, 0, 0, 0, 0]);
         assert_eq!(packed, expect);
         let unpacked = LotteryInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check); 

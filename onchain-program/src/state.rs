@@ -32,8 +32,6 @@ pub struct LotteryState {
     pub fund : u64,
     /// price for a lottery
     pub price: u64,
-    /// fee account
-    pub fee : Pubkey,
     /// award accounts
     pub billboard: Pubkey,
     /// all accounts
@@ -47,7 +45,7 @@ impl IsInitialized for LotteryState {
     }
 }
 impl Pack for LotteryState {
-    const LEN: usize = 8+8+8+32+32+2+1000*(32+2+1);
+    const LEN: usize = 8+8+8+32+2+1000*(32+2+1);
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         let award_buf = array_ref![src, 0, 8];
         let award =  u64::from_le_bytes(*award_buf);
@@ -55,16 +53,14 @@ impl Pack for LotteryState {
         let fund =  u64::from_le_bytes(*fund_buf);
         let price_buf = array_ref![src, 16, 8];
         let price =  u64::from_le_bytes(*price_buf);
-        let fee_buf = array_ref![src, 24, 32];
-        let fee = Pubkey::new_from_array(*fee_buf);
-        let billboard_buf = array_ref![src, 56, 32];
+        let billboard_buf = array_ref![src, 24, 32];
         let billboard = Pubkey::new_from_array(*billboard_buf);
-        let count_buf = array_ref![src, 88, 2];
+        let count_buf = array_ref![src, 56, 2];
         let count =  u16::from_le_bytes(*count_buf);
         let mut pool = Vec::new();
         for i in 0..count {
             let i = i as usize;
-            let offset:usize = 90+i*(32+2+1) ;
+            let offset:usize = 58+i*(32+2+1) ;
             let account_buf = array_ref![src,offset, 32];
             let account= Pubkey::new_from_array(*account_buf);
             let amount_buf = array_ref![src,offset+32, 2];
@@ -85,7 +81,6 @@ impl Pack for LotteryState {
             award,
             fund,
             price,
-            fee,
             billboard,
             pool,
         })
@@ -97,16 +92,14 @@ impl Pack for LotteryState {
         fund_buf.copy_from_slice(&self.fund.to_le_bytes());
         let price_buf = array_mut_ref![dst, 16, 8];
         price_buf.copy_from_slice(&self.price.to_le_bytes());
-        let fee_buf = array_mut_ref![dst, 24, 32];
-        fee_buf.copy_from_slice(self.fee.as_ref());
-        let billboard_buf = array_mut_ref![dst, 56, 32];
+        let billboard_buf = array_mut_ref![dst, 24, 32];
         billboard_buf.copy_from_slice(self.billboard.as_ref());
-        let count_buf = array_mut_ref![dst, 88, 2];
+        let count_buf = array_mut_ref![dst, 56, 2];
         let count:u16 = self.pool.len() as u16;
         count_buf.copy_from_slice(&count.to_le_bytes());
         let mut i:usize=0;
         for val in &self.pool{
-            let offset:usize = 90+i*(32+2+1);
+            let offset:usize = 58+i*(32+2+1);
             let key_buf = array_mut_ref![dst, offset, 32];
             key_buf.copy_from_slice(val.account.as_ref());
             let lottery_buf = array_mut_ref![dst, offset+32, 2];
@@ -214,7 +207,6 @@ mod test {
             award:0u64,
             fund:0u64,
             price:0u64,
-            fee:Pubkey::new(&[0u8;32]),
             billboard:Pubkey::new(&[0u8;32]),
             pool: Vec::new(),
         };
@@ -225,9 +217,8 @@ mod test {
         expect.extend_from_slice(&[0u8,0,0,0,0,0,0,0]);
         expect.extend_from_slice(&[0u8,0,0,0,0,0,0,0]);
         expect.extend_from_slice(&[0u8;32]);
-        expect.extend_from_slice(&[0u8;32]);
         expect.extend_from_slice(&[0u8;2]);
-        expect.extend_from_slice(&[0u8;LotteryState::LEN-(8+8+8+32+32+2)]);
+        expect.extend_from_slice(&[0u8;LotteryState::LEN-(8+8+8+32+2)]);
         assert_eq!(packed.to_vec(), expect);
         let unpacked = LotteryState::unpack_from_slice(&expect).unwrap();
         assert_eq!(unpacked, check); 
@@ -237,7 +228,6 @@ mod test {
             award:0u64,
             fund:10_000_000_000u64,
             price:1_000_000_000u64,
-            fee:Pubkey::new(&[1u8;32]),
             billboard:Pubkey::new(&[2u8;32]),
             pool: Vec::new(),
         };
@@ -247,10 +237,9 @@ mod test {
         expect.extend_from_slice(&[0u8,0,0,0,0,0,0,0]);
         expect.extend_from_slice(&[0, 228, 11, 84, 2, 0, 0, 0]);
         expect.extend_from_slice(&[0, 202, 154, 59, 0, 0, 0, 0]);
-        expect.extend_from_slice(&[1u8;32]);
         expect.extend_from_slice(&[2u8;32]);
         expect.extend_from_slice(&[0u8;2]);
-        expect.extend_from_slice(&[0u8;LotteryState::LEN-(8+8+8+32+32+2)]);
+        expect.extend_from_slice(&[0u8;LotteryState::LEN-(8+8+8+32+2)]);
         assert_eq!(packed.to_vec(), expect);
         let unpacked = LotteryState::unpack_from_slice(&expect).unwrap();
         assert_eq!(unpacked, check); 
@@ -266,7 +255,6 @@ mod test {
             award:0u64,
             fund:10_000_000_000u64,
             price:1_000_000_000u64,
-            fee:Pubkey::new(&[1u8;32]),
             billboard:Pubkey::new(&[2u8;32]),
             pool, 
         };
@@ -276,13 +264,12 @@ mod test {
         expect.extend_from_slice(&[0u8,0,0,0,0,0,0,0]);
         expect.extend_from_slice(&[0, 228, 11, 84, 2, 0, 0, 0]);
         expect.extend_from_slice(&[0, 202, 154, 59, 0, 0, 0, 0]);
-        expect.extend_from_slice(&[1u8;32]);
         expect.extend_from_slice(&[2u8;32]);
         expect.extend_from_slice(&[1, 0]);
         expect.extend_from_slice(&[3; 32]);
         expect.extend_from_slice(&[2, 0]);
         expect.extend_from_slice(&[1]);
-        expect.extend_from_slice(&[0u8;LotteryState::LEN-(8+8+8+32+32+2)-35]);
+        expect.extend_from_slice(&[0u8;LotteryState::LEN-(8+8+8+32+2)-35]);
         assert_eq!(packed.to_vec(), expect);
         let unpacked = LotteryState::unpack_from_slice(&expect).unwrap();
         assert_eq!(unpacked, check); 
@@ -306,7 +293,6 @@ mod test {
             award:0u64,
             fund:10_000_000_000u64,
             price:1_000_000_000u64,
-            fee:Pubkey::new(&[1u8;32]),
             billboard:Pubkey::new(&[2u8;32]),
             pool, 
         };
@@ -316,7 +302,6 @@ mod test {
         expect.extend_from_slice(&[0u8,0,0,0,0,0,0,0]);
         expect.extend_from_slice(&[0, 228, 11, 84, 2, 0, 0, 0]);
         expect.extend_from_slice(&[0, 202, 154, 59, 0, 0, 0, 0]);
-        expect.extend_from_slice(&[1u8;32]);
         expect.extend_from_slice(&[2u8;32]);
         expect.extend_from_slice(&[2, 0]);
         expect.extend_from_slice(&[3; 32]);
@@ -325,7 +310,7 @@ mod test {
         expect.extend_from_slice(&[3; 32]);
         expect.extend_from_slice(&[2, 0]);
         expect.extend_from_slice(&[0]);
-        expect.extend_from_slice(&[0u8;LotteryState::LEN-(8+8+8+32+32+2)-35*2]);
+        expect.extend_from_slice(&[0u8;LotteryState::LEN-(8+8+8+32+2)-35*2]);
         assert_eq!(packed.to_vec(), expect);
         let unpacked = LotteryState::unpack_from_slice(&expect).unwrap();
         assert_eq!(unpacked, check);
