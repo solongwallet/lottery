@@ -19,7 +19,7 @@ class Content extends React.Component {
     this.state = { };
     this.onInitialize = this.onInitialize.bind(this);
     this.onSign = this.onSign.bind(this);
-    this.onBuy = this.onBuy.bind(this);
+    this.onGM= this.onGM.bind(this);
     this.onRoll = this.onRoll.bind(this);
     this.onReward = this.onReward.bind(this);
     this.onQueryBillboard = this.onQueryBillboard.bind(this);
@@ -34,8 +34,7 @@ class Content extends React.Component {
 
     this.adminAccount = new Account(this.adminPrivKey);
     this.playerAccount = new Account(this.playerPrivKey);
-    this.programID = new PublicKey('CuEY6pT5eJwZx8JUwaV15rFXo72gvSLyyusRKDo8aYWj');
-    this.feeAccountKey = new PublicKey('AAe9zTZYBne6zjshfQARygr51yQx7R36eSSiwieWHXyH');
+    this.programID = new PublicKey('Cdmfx6JGtxKnpbsXhrNCDAEiziNK4SharrD7GBUNRcjN');
     this.billboardAccount = new Account();
     this.poolAccount = new Account(); 
     this.billboardAccountKey = new PublicKey("4FG8zFDyy3m7jLVmqQ8MyViX9LJXkccE88QPqRZa9X6c");
@@ -57,7 +56,7 @@ class Content extends React.Component {
         </React.Fragment>
         <Divider />
         <React.Fragment>
-          <Button onClick={this.onBuy}> buy</Button>
+          <Button onClick={this.onGM}> GM</Button>
         </React.Fragment>
         <Divider />
         <React.Fragment>
@@ -167,26 +166,26 @@ class Content extends React.Component {
     }) 
   }
 
-  async onBuy() {
-    let trxi = SolongLottery.createBuyInstruction(
-      this.playerAccount.publicKey,
+  async onGM() {
+    let trxi = SolongLottery.createGMInstruction(
       this.adminAccount.publicKey,
-      this.feeAccountKey,
       //this.poolAccountKey,
       this.poolAccount.publicKey,
       this.programID,
+      2000000000,
+      2000000000,
     );
 
     const transaction = new Transaction();
     transaction.add(trxi);
 
-    let signers= [this.playerAccount];
+    let signers= [this.adminAccount];
     sendAndConfirmTransaction(this.connection, transaction, signers, {
         skipPreflight: false,
         commitment: 'recent',
         preflightCommitment: 'recent',
     }).then(()=>{
-      console.log("done buy");
+      console.log("done GM");
     }).catch((e)=>{
       console.log("error:", e);
     }) 
@@ -220,7 +219,6 @@ class Content extends React.Component {
 
     let trxi = SolongLottery.createInitializeInstruction(
       this.adminAccount.publicKey,
-      this.feeAccountKey,
       this.billboardAccount.publicKey,
       this.poolAccount.publicKey,
       this.programID,
