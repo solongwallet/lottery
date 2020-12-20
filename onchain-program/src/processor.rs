@@ -40,9 +40,12 @@ impl Processor {
                 Self::process_signin(program_id, accounts)
             }
 
-            LotteryInstruction::Buy => {
-                log_info("Instruction: Buy");
-                Self::process_buy(program_id, accounts)
+            LotteryInstruction::GM{
+                fund,
+                price
+            } => {
+                log_info("Instruction: GM");
+                Self::process_gm(program_id, accounts, fund, price)
             }
 
             LotteryInstruction::Roll => {
@@ -67,7 +70,6 @@ impl Processor {
         log_info(format!("process_initialize fund:{} price:{}", fund, price ).as_str());
         let account_info_iter = &mut accounts.iter();
         let admin_info= next_account_info(account_info_iter)?;
-        let fee_info= next_account_info(account_info_iter)?;
         let pool_info= next_account_info(account_info_iter)?;
         let billboard_info= next_account_info(account_info_iter)?;
 
@@ -91,7 +93,6 @@ impl Processor {
         lottery.fund = fund;
         lottery.award = 0;
         lottery.price = price;
-        lottery.fee =  *fee_info.key;
         lottery.billboard = *billboard_info.key;
         lottery.pool.clear();
         LotteryState::pack(lottery, &mut pool_info.data.borrow_mut())?;
@@ -117,8 +118,8 @@ impl Processor {
         }
     
         let mut lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
-        log_info(&format!("process_signin lottery:award[{}] fund[{}] price[{}] fee[{}] billboard[{}] pool[{}]",
-                lottery.award, lottery.fund, lottery.price, lottery.fee, lottery.billboard, lottery.pool.len()));
+        log_info(&format!("process_signin lottery:award[{}] fund[{}] price[{}] billboard[{}] pool[{}]",
+                lottery.award, lottery.fund, lottery.price, lottery.billboard, lottery.pool.len()));
         let mut founded = false;
         for val in &mut lottery.pool{
             if val.account == *account_info.key {
@@ -143,79 +144,38 @@ impl Processor {
     }
 
     /// Processes an [Initialize](enum.Instruction.html).
-    pub fn process_buy(
-        _program_id: &Pubkey,
+    pub fn process_gm(
+        program_id: &Pubkey,
         accounts: &[AccountInfo],
+        fund:u64,
+        price:u64,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
-        let system_program_info= next_account_info(account_info_iter)?;
-        let account_info= next_account_info(account_info_iter)?;
         let admin_info= next_account_info(account_info_iter)?;
-        let fee_info= next_account_info(account_info_iter)?;
         let pool_info= next_account_info(account_info_iter)?;
 
-        // check pool data length first 
-        // check fee then 
+
+        //check permission first
+        if Pubkey::from_str(Self::ADMIN_KEY).unwrap() != *admin_info.key {
+            return Err(LotteryError::InvalidPermission.into());
+        }
+        if pool_info.owner != program_id ||
+            !admin_info.is_signer{
+            return Err(LotteryError::InvalidPermission.into());
+        } 
+
+        // check account's data length
         if pool_info.data_len() != LotteryState::LEN {
             return Err(LotteryError::InvalidAccountLength.into());
         }
+
         let mut lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
-        if *fee_info.key != lottery.fee {
-            return Err(LotteryError::InvaliedFee.into());
-        }
-
-        let price_lamports = lottery.price;
-        // check balance
-        if account_info.lamports() < price_lamports{
-            return Err(LotteryError::LowBalance.into());
-        }
-
-        // send to admin
-        invoke(
-            &system_instruction::transfer(
-                account_info.key,
-                admin_info.key,
-                price_lamports*9/10,
-            ),
-            &[
-                account_info.clone(),
-                admin_info.clone(),
-                system_program_info.clone(),
-            ],
-        )?;
-
-        // send to fee
-        invoke(
-            &system_instruction::transfer(
-                account_info.key,
-                fee_info.key,
-                price_lamports*1/10,
-            ),
-            &[
-                account_info.clone(),
-                fee_info.clone(),
-                system_program_info.clone(),
-            ],
-        )?;
-
-
-        lottery.award +=price_lamports*9/10;
-        let mut founded = false;
-        for val in &mut lottery.pool{
-            if val.account == *account_info.key {
-                val.amount += 1;
-                founded = true;
-                break;
-            }
-        }
-        if ! founded {
-            lottery.pool.push(LotteryRecord{
-                account: *account_info.key,
-                amount: 1,
-                signin: false,
-            });
-        }
+        log_info(&format!("process_gm old lottery:award[{}] fund[{}] price[{}] billboard[{}] pool[{}]",
+                lottery.award, lottery.fund, lottery.price, lottery.billboard, lottery.pool.len()));
+        lottery.fund = fund;
+        lottery.price = price;
         LotteryState::pack(lottery, &mut pool_info.data.borrow_mut())?;
+
         Ok(())
     }
 
@@ -322,7 +282,7 @@ impl Processor {
             log_info(&format!("come to send award: {}:{}:{}", val.account, val.award, val.rewarded));
             if ! val.rewarded  {
                 // need not check balance Cau'z it will fail
-                log_info("before send award");
+                log_info(&format!("send award to {}", val.account));
                 invoke(
                     &system_instruction::transfer(
                         admin_info.key,
