@@ -1,6 +1,6 @@
 {
   "name": "@solong/lottery.js",
-  "version": "0.0.3",
+  "version": "0.0.6",
   "description": "Solong lotteryjavascript library",
   "main": "src/index.js",
   "repository": "https://github.com/solongwallet/lottery/dapp",
@@ -13,10 +13,11 @@
     "clean": "rm -rf ./coverage ./lib"
   },
   "devDependencies": {
-    "cross-env": "^7.0.2"
+    "cross-env": "^7.0.3"
   },
   "dependencies": {
     "@babel/core": "^7.11.6",
+    "@solana/spl-token": "^0.0.13",
     "@solana/spl-token-swap": "^0.0.4",
     "@solana/web3.js": "^0.78.2",
     "bip32": "^2.0.6",
@@ -25,6 +26,7 @@
     "buffer-layout": "^1.2.0",
     "crypto": "^1.0.1",
     "pbkdf2": "^3.1.1",
+    "rollup": "^2.35.1",
     "rollup-plugin-babel": "^4.4.0",
     "rollup-plugin-commonjs": "^10.1.0",
     "rollup-plugin-copy": "^3.3.0",

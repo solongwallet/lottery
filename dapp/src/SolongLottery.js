@@ -2,19 +2,12 @@
  * @flow
  */
 
-import * as BufferLayout from 'buffer-layout';
-import { Connection,
-    Transaction,
+import { 
     PublicKey,
     SystemProgram,
     TransactionInstruction,
-    sendAndConfirmTransaction,
-    SYSVAR_CLOCK_PUBKEY,
-    Account} from "@solana/web3.js"
-import bs58 from 'bs58';
+    SYSVAR_CLOCK_PUBKEY } from "@solana/web3.js"
 import {u64} from '@solana/spl-token'
-import { uint64 } from 'solong.js/src/token';
-import * as Layout from './Layout';
 import {intFromBytes} from './utils'
 
 

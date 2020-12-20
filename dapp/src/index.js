@@ -1,4 +1,4 @@
 
 //@flow
 export {SolongLottery} from './SolongLottery'
-export {poolSpace, awardSpace} from './utils'
+export {poolSpace, awardSpace} from './Layout'
