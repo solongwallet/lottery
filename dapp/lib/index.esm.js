@@ -1,6 +1,6 @@
 import { TransactionInstruction, SystemProgram, PublicKey, SYSVAR_CLOCK_PUBKEY } from '@solana/web3.js';
 import { u64 } from '@solana/spl-token';
-import { struct } from 'buffer-layout';
+import { struct, u8, blob } from 'buffer-layout';
 
 function intFromBytes(byteArr) {
   let ret = 0;
@@ -23,7 +23,7 @@ class SolongLottery {
    *
    */
   static createInitializeInstruction(adminAccountKey, billboardAccountKey, poolAccountKey, programID, fund, price) {
-    const dataLayout = BufferLayout.struct([BufferLayout.u8("i"), BufferLayout.blob(8, "fund"), BufferLayout.blob(8, "price")]);
+    const dataLayout = struct([u8("i"), blob(8, "fund"), blob(8, "price")]);
     const data = Buffer.alloc(dataLayout.span);
     dataLayout.encode({
       i: 1,
@@ -58,7 +58,7 @@ class SolongLottery {
 
 
   static createSignInstruction(playerAccountKey, poolAccountKey, programID) {
-    const dataLayout = BufferLayout.struct([BufferLayout.u8("i")]);
+    const dataLayout = struct([u8("i")]);
     const data = Buffer.alloc(dataLayout.span);
     dataLayout.encode({
       i: 2 // sign instruct 
@@ -87,7 +87,7 @@ class SolongLottery {
 
 
   static createGMInstruction(adminAccountKey, poolAccountKey, programID, fund, price) {
-    const dataLayout = BufferLayout.struct([BufferLayout.u8("i"), BufferLayout.blob(8, "fund"), BufferLayout.blob(8, "price")]);
+    const dataLayout = struct([u8("i"), blob(8, "fund"), blob(8, "price")]);
     const data = Buffer.alloc(dataLayout.span);
     dataLayout.encode({
       i: 3,
@@ -118,7 +118,7 @@ class SolongLottery {
 
 
   static createRollInstruction(adminAccountKey, poolAccountKey, billboardAccountKey, programID) {
-    const dataLayout = BufferLayout.struct([BufferLayout.u8("i")]);
+    const dataLayout = struct([u8("i")]);
     const data = Buffer.alloc(dataLayout.span);
     dataLayout.encode({
       i: 4 // roll instruct 
@@ -155,7 +155,7 @@ class SolongLottery {
 
 
   static createRewardInstruction(adminAccountKey, playerAccountKey, billboardAccountKey, programID) {
-    const dataLayout = BufferLayout.struct([BufferLayout.u8("i")]);
+    const dataLayout = struct([u8("i")]);
     const data = Buffer.alloc(dataLayout.span);
     dataLayout.encode({
       i: 5 // reward instruct 

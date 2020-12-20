@@ -9,6 +9,7 @@ import {
     SYSVAR_CLOCK_PUBKEY } from "@solana/web3.js"
 import {u64} from '@solana/spl-token'
 import {intFromBytes} from './utils'
+import * as BufferLayout from 'buffer-layout';
 
 
 /**

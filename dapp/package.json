@@ -1,11 +1,13 @@
 {
   "name": "@solong/lottery.js",
-  "version": "0.0.6",
+  "version": "0.0.10",
   "description": "Solong lotteryjavascript library",
-  "main": "src/index.js",
   "repository": "https://github.com/solongwallet/lottery/dapp",
   "author": "SolongWallet(solongwallet@gmail.com)",
+  "main": "lib/index.cjs.js",
+  "module": "lib/index.esm.js",
   "files": [
+    "/lib",
     "/src"
   ],
   "scripts": {

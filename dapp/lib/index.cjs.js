@@ -4,7 +4,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 var web3_js = require('@solana/web3.js');
 var splToken = require('@solana/spl-token');
-var BufferLayout$1 = require('buffer-layout');
+var BufferLayout = require('buffer-layout');
 
 function intFromBytes(byteArr) {
   let ret = 0;
@@ -276,7 +276,7 @@ const awardSpace = 2 + 1000 * (32 + 8 + 1 + 8);
  * Layout for LotteryInitState 
  */
 
-const LotteryInitState = BufferLayout$1.struct([]);
+const LotteryInitState = BufferLayout.struct([]);
 
 exports.SolongLottery = SolongLottery;
 exports.awardSpace = awardSpace;
