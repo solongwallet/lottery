@@ -282,7 +282,7 @@ impl Processor {
             log_info(&format!("come to send award: {}:{}:{}", val.account, val.award, val.rewarded));
             if ! val.rewarded  {
                 // need not check balance Cau'z it will fail
-                log_info("before send award");
+                log_info(&format!("send award to {}", val.account));
                 invoke(
                     &system_instruction::transfer(
                         admin_info.key,

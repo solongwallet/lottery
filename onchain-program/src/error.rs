@@ -44,6 +44,10 @@ pub enum LotteryError {
     #[error("Low balance for 1 SOL")]
     LowBalance, 
 
+    /// Invalid account for reward 
+    #[error("Invalid account for reward")]
+    InvalidAccountForReward, 
+
     /// TestError 
     #[error("TestError")]
     TestError,
@@ -74,6 +78,7 @@ impl PrintProgramError for LotteryError {
             LotteryError::AlreadySignin=> msg!("Already signin"),
             LotteryError::InvaliedFee=> msg!("Invalied fee account"),
             LotteryError::LowBalance=> msg!("Low balance for 1 SOL"),
+            LotteryError::InvalidAccountForReward=> msg!("Invalid account for reward"),
             LotteryError::TestError => msg!("TestError"),
         }
     }
