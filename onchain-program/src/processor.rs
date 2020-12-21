@@ -281,6 +281,9 @@ impl Processor {
         for val in &mut award.billboard {
             log_info(&format!("come to send award: {}:{}:{}", val.account, val.award, val.rewarded));
             if ! val.rewarded  {
+                if val.account != *account_info.key {
+                    continue;
+                }
                 // need not check balance Cau'z it will fail
                 log_info(&format!("send award to {}", val.account));
                 invoke(
