@@ -38,9 +38,25 @@ use solana_clap_utils::{
     },
     ArgConstant,
 };
+use std::fmt::Display;
+use std::str::FromStr;
+
 
 static WARNING: Emoji = Emoji("⚠️", "!");
 
+pub fn is_fund<T>(found: T) -> Result<(), String>
+where
+    T: AsRef<str> + Display,
+{
+    if found.as_ref().parse::<u64>().is_ok() {
+        Ok(())
+    } else {
+        Err(format!(
+            "Unable to parse input fundamental as integer , provided: {}",
+            found
+        ))
+    }
+}
 
 fn main() {
     let app_matches = App::new(crate_name!())
@@ -64,15 +80,40 @@ fn main() {
             .validator(is_url)
             .help("JSON RPC URL for the cluster.  Default from the configuration file."),
     )
+    .arg({
+        let arg = Arg::with_name("config_file")
+            .short("C")
+            .long("config")
+            .value_name("PATH")
+            .takes_value(true)
+            .global(true)
+            .help("Configuration file to use");
+        if let Some(ref config_file) = *solana_cli_config::CONFIG_FILE {
+            arg.default_value(&config_file)
+        } else {
+            arg
+        }
+    })
     .subcommand(SubCommand::with_name("initialize").about("Initialize lottery")
-            .arg(
-                Arg::with_name("config")
-                    .long("config")
-                    .validator(is_mint_decimals)
-                    .value_name("DECIMALS")
-                    .takes_value(true)
-                    .help("Account address for config file"),
-            )
+        .arg(
+            Arg::with_name("fund")
+                .long("fundamental")
+                .validator(is_fund)
+                .value_name("FUND")
+                .takes_value(true)
+                .help("fundaental for pool"),
+        ),
+    )
+    .get_matches();
+        
+    let (sub_command, sub_matches) = app_matches.subcommand();
+    let matches = sub_matches.unwrap();
+    let verbose = matches.is_present("verbose");
+    println!("verbose:{}", verbose);
+
+    let _ = match (sub_command, sub_matches) {
+        _ => println!("default subcommand"),
+    };
 
 
     println!("{} Hello, world!",WARNING);
