@@ -1,6 +1,6 @@
 {
   "name": "@solong/lottery.js",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "description": "Solong lotteryjavascript library",
   "repository": "https://github.com/solongwallet/lottery/dapp",
   "author": "SolongWallet(solongwallet@gmail.com)",
