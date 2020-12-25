@@ -38,8 +38,8 @@ class Content extends React.Component {
     this.programID = new PublicKey('95zvnioz4A2wc7cezVf9SPTmDxAYcVZAAzjdnU5jDpTR');
     this.billboardAccount = new Account();
     this.poolAccount = new Account(); 
-    this.billboardAccountKey = new PublicKey("AFxZrsaur8Lk7M6FUHBByeB6nUH8m7ecd4dxKJMEyjXf");
-    this.poolAccountKey = new PublicKey("Gi1Fa9NTw5MufrQqb7axjQHrZfpqDnvrPUPntmTNX9Xq"); 
+    this.billboardAccountKey = new PublicKey("Dhk5ucvtyWXCFXtqwgNNWEyT7NHdzfyNfYGkJHMCx5ZR");
+    this.poolAccountKey = new PublicKey("GgtPHBhAWpJMxmWLcWhA5wY9h3NWkCZN2kGYeXAPUePG"); 
   }
 
 
@@ -81,7 +81,7 @@ class Content extends React.Component {
 
   async onQueryPool() {
     SolongLottery.GetLotteryPool(this.connection, 
-      this.poolAccount.publicKey).then((pool)=>{
+      this.poolAccountKey).then((pool)=>{
           console.log("pool:", pool);
       });
   }
@@ -146,7 +146,7 @@ class Content extends React.Component {
 
   async onSign() {
 
-    for (let i=0;i<1024;i++) {
+    for (let i=0;i<5;i++) {
 
       let player = new Account();
       this.connection.requestAirdrop(player.publicKey, 10*1000000000).then(()=>{
@@ -236,22 +236,22 @@ class Content extends React.Component {
 
     let trxi = SolongLottery.createInitializeInstruction(
       this.adminAccount.publicKey,
-      this.billboardAccount.publicKey,
-      //this.billboardAccountKey,
-      //this.poolAccountKey,
-      this.poolAccount.publicKey,
+      //this.billboardAccount.publicKey,
+      this.billboardAccountKey,
+      this.poolAccountKey,
+      //this.poolAccount.publicKey,
       this.programID,
       1000000000,
       1000000000,
     );
 
     const transaction = new Transaction();
-    transaction.add(trxi0);
-    transaction.add(trxi1);
+    //transaction.add(trxi0);
+    //transaction.add(trxi1);
     transaction.add(trxi);
 
-    let signers= [this.adminAccount, this.billboardAccount, this.poolAccount];
-    //let signers= [this.adminAccount];
+    //let signers= [this.adminAccount, this.billboardAccount, this.poolAccount];
+    let signers= [this.adminAccount];
     sendAndConfirmTransaction(this.connection, transaction, signers, {
         skipPreflight: false,
         commitment: 'recent',
