@@ -3,7 +3,7 @@
 use crate::{
     error::LotteryError,
     instruction::LotteryInstruction,
-    state::{LotteryState, LotteryRecord, AwardState, AwardBill},
+    state::{MAX_PLAYER, LOTTERY_STATE_LEN, AwardState, AwardBill},
     log_info,
 };
 use solana_program::{
@@ -17,6 +17,7 @@ use solana_program::{
     sysvar::Sysvar,
 };
 use std::str::FromStr;
+use arrayref::{array_mut_ref, array_ref, mut_array_refs};
 
 
 /// Program state handler.
@@ -84,22 +85,25 @@ impl Processor {
         } 
 
         // check account's data length
-        if pool_info.data_len() != LotteryState::LEN ||
+        if pool_info.data_len() != LOTTERY_STATE_LEN ||
             billboard_info.data_len() != AwardState::LEN{
             return Err(LotteryError::InvalidAccountLength.into());
         }
 
-        let mut lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
-        lottery.fund = fund;
-        lottery.award = 0;
-        lottery.price = price;
-        lottery.billboard = *billboard_info.key;
-        lottery.pool.clear();
-        LotteryState::pack(lottery, &mut pool_info.data.borrow_mut())?;
+        let pool_data = &mut pool_info.data.borrow_mut();
+        let pool_buf = array_mut_ref![pool_data, 0, 42];
+        let (
+            fund_buf,
+            billboard_addr_buf,
+            player_count_buf,
+        ) = mut_array_refs![pool_buf, 8, 32, 2];
+        *fund_buf = fund.to_le_bytes();
+        billboard_addr_buf.copy_from_slice(billboard_info.key.as_ref());
+        *player_count_buf = 0u16.to_le_bytes();
 
-        let mut award= AwardState::unpack_unchecked(&billboard_info.data.borrow())?;
-        award.billboard.clear();
-        AwardState::pack(award, &mut billboard_info.data.borrow_mut())?;
+        let mut billboard= AwardState::unpack_unchecked(&billboard_info.data.borrow())?;
+        billboard.billboard.clear();
+        AwardState::pack(billboard, &mut billboard_info.data.borrow_mut())?;
 
         Ok(())
     }
@@ -113,33 +117,35 @@ impl Processor {
         let account_info= next_account_info(account_info_iter)?;
         let pool_info= next_account_info(account_info_iter)?;
 
-        if pool_info.data_len() != LotteryState::LEN {
+        if pool_info.data_len() != LOTTERY_STATE_LEN {
             return Err(LotteryError::InvalidAccountLength.into());
         }
-    
-        let mut lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
-        log_info(&format!("process_signin lottery:award[{}] fund[{}] price[{}] billboard[{}] pool[{}]",
-                lottery.award, lottery.fund, lottery.price, lottery.billboard, lottery.pool.len()));
-        let mut founded = false;
-        for val in &mut lottery.pool{
-            if val.account == *account_info.key {
-                val.amount += 1;
-                log_info(&format!("found account:{} lottery:{}", val.account, val.amount));
-                founded = true;
-                if val.signin {
-                    return Err(LotteryError::AlreadySignin.into());
-                }
-                break;
+
+        let pool_data = &mut pool_info.data.borrow_mut();
+        let pool_buf = array_mut_ref![pool_data, 0, LOTTERY_STATE_LEN];
+        let (
+            _fund_buf,
+            _billboard_addr_buf,
+            player_count_buf,
+            players_buf,
+        ) = mut_array_refs![pool_buf, 8, 32, 2, MAX_PLAYER*32];
+        let player_count = u16::from_le_bytes(*player_count_buf);
+        if player_count >= MAX_PLAYER as u16 {
+            return Err(LotteryError::TooManyPlayers.into());  
+        }
+        for i in 0..player_count {
+            let s = 32*i as usize;
+            let e = 32*(i+1) as usize;
+            let player = Pubkey::new(&players_buf[s..e]);
+            if player == *account_info.key {
+                return  Err(LotteryError::AlreadySignin.into());  
             }
         }
-        if ! founded {
-            lottery.pool.push(LotteryRecord{
-                account: *account_info.key,
-                amount: 1,
-                signin: true,
-            });
-        }
-        LotteryState::pack(lottery, &mut pool_info.data.borrow_mut())?;
+        *player_count_buf = (1u16+player_count).to_le_bytes(); 
+        let s = (player_count*32) as usize;
+        let player_buf = array_mut_ref![players_buf, s, 32];
+        player_buf.copy_from_slice(account_info.key.as_ref());
+
         Ok(())
     }
 
@@ -148,7 +154,7 @@ impl Processor {
         program_id: &Pubkey,
         accounts: &[AccountInfo],
         fund:u64,
-        price:u64,
+        _price:u64,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let admin_info= next_account_info(account_info_iter)?;
@@ -165,17 +171,14 @@ impl Processor {
         } 
 
         // check account's data length
-        if pool_info.data_len() != LotteryState::LEN {
+        if pool_info.data_len() != LOTTERY_STATE_LEN {
             return Err(LotteryError::InvalidAccountLength.into());
         }
 
-        let mut lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
-        log_info(&format!("process_gm old lottery:award[{}] fund[{}] price[{}] billboard[{}] pool[{}]",
-                lottery.award, lottery.fund, lottery.price, lottery.billboard, lottery.pool.len()));
-        lottery.fund = fund;
-        lottery.price = price;
-        LotteryState::pack(lottery, &mut pool_info.data.borrow_mut())?;
-
+        let pool_data = &mut pool_info.data.borrow_mut();
+        let pool_buf = array_mut_ref![pool_data, 0, 42];
+        let fund_buf = array_mut_ref![pool_buf,0, 8];
+        *fund_buf = fund.to_le_bytes();
         Ok(())
     }
 
@@ -202,50 +205,43 @@ impl Processor {
         } 
 
         // check account's data length
-        if pool_info.data_len() != LotteryState::LEN ||
+        if pool_info.data_len() != LOTTERY_STATE_LEN ||
             award_info.data_len() != AwardState::LEN{
             return Err(LotteryError::InvalidAccountLength.into());
         }
 
+        let pool_data = &mut pool_info.data.borrow_mut();
+        let pool_buf = array_mut_ref![pool_data, 0, LOTTERY_STATE_LEN];
+        let (
+            fund_buf,
+            _billboard_addr_buf,
+            player_count_buf,
+            players_buf,
+        ) = mut_array_refs![pool_buf, 8, 32, 2, MAX_PLAYER*32];
+        let fund = u64::from_le_bytes(*fund_buf);
+        let player_count = u16::from_le_bytes(*player_count_buf);
 
-        let mut lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
-        if lottery.pool.len() == 0 {
+        if player_count == 0 {
             return Ok(());
         }
-        let mut total_lottery= 0u64;
-        for val in &lottery.pool{
-            total_lottery += val.amount as u64;
-        }
-        let l:u64 = clock.epoch % total_lottery  +1 ;
+
+        let l:u64 = clock.epoch % (player_count as u64);
         log_info(&format!("l for winner is {}", l));
-        let mut total_lottery = 0u64;
-        let mut winner : Pubkey = Pubkey::new_from_array([0u8; 32]);
-        for val in &lottery.pool{
-            total_lottery += val.amount as u64;
-            if total_lottery >= l {
-                winner = val.account;
-                log_info(&format!("winner is {}", winner));
-                break;
-            }
-        }
-        
-        if winner == Pubkey::new_from_array([0u8; 32]) {
-            return Ok(());
-        }
+        let s = (l*32) as usize;
+        let winner = Pubkey::new(array_ref!(players_buf,s,32));
 
+        log_info(&format!("winner is {}", winner));
+        
         let mut award= AwardState::unpack_unchecked(&award_info.data.borrow())?;
         let bill = AwardBill{
             account: winner,
-            award: lottery.award + lottery.fund,
+            award: fund,
             rewarded: false,
             timestamp:clock.unix_timestamp,
         };
         award.billboard.push(bill);
         AwardState::pack(award, &mut award_info.data.borrow_mut())?;
-
-        lottery.award = 0;
-        lottery.pool.clear();
-        LotteryState::pack(lottery, &mut pool_info.data.borrow_mut())?;
+        *player_count_buf = 0u16.to_le_bytes();
 
         Ok(())
     }

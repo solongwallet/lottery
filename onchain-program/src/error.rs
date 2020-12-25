@@ -48,6 +48,11 @@ pub enum LotteryError {
     #[error("Invalid account for reward")]
     InvalidAccountForReward, 
 
+
+    /// too many players
+    #[error("Too many players")]
+    TooManyPlayers, 
+
     /// TestError 
     #[error("TestError")]
     TestError,
@@ -79,6 +84,7 @@ impl PrintProgramError for LotteryError {
             LotteryError::InvaliedFee=> msg!("Invalied fee account"),
             LotteryError::LowBalance=> msg!("Low balance for 1 SOL"),
             LotteryError::InvalidAccountForReward=> msg!("Invalid account for reward"),
+            LotteryError::TooManyPlayers=> msg!("Too many players"),
             LotteryError::TestError => msg!("TestError"),
         }
     }
