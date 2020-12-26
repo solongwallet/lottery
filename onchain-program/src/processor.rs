@@ -225,7 +225,9 @@ impl Processor {
             return Ok(());
         }
 
-        let l:u64 = clock.epoch % (player_count as u64);
+        //log_info(&format!("unix_timestamp is {}", clock.unix_timestamp));
+        //log_info(&format!("player count is {}", player_count));
+        let l:u64 = (clock.unix_timestamp as u64) % (player_count as u64);
         log_info(&format!("l for winner is {}", l));
         let s = (l*32) as usize;
         let winner = Pubkey::new(array_ref!(players_buf,s,32));
