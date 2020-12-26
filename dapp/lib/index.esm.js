@@ -199,28 +199,50 @@ class SolongLottery {
       const pool_buf = result.value.data[0];
       const pool = Buffer.from(pool_buf, 'base64'); //console.log("pool:", pool);
 
-      const award = intFromBytes(pool.slice(0, 8));
-      const fund = intFromBytes(pool.slice(8, 16));
-      const price = intFromBytes(pool.slice(16, 24));
-      const playerCount = intFromBytes(pool.slice(56, 58)); //console.log("Player count:", playerCount);
+      if (poolAccountKey.toBase58() == "Gi1Fa9NTw5MufrQqb7axjQHrZfpqDnvrPUPntmTNX9Xq") {
+        const award = intFromBytes(pool.slice(0, 8));
+        const fund = intFromBytes(pool.slice(8, 16));
+        const price = intFromBytes(pool.slice(16, 24));
+        const playerCount = intFromBytes(pool.slice(56, 58)); //console.log("Player count:", playerCount);
 
-      let players = new Map();
+        let players = new Map();
 
-      for (let i = 0; i < playerCount; i++) {
-        const offset = 58 + i * 35;
-        const playerAccountKey = new PublicKey(pool.slice(offset, offset + 32)).toBase58();
-        const playerLottery = intFromBytes(pool.slice(offset + 32, offset + 32 + 2));
-        players.set(playerAccountKey, playerLottery);
+        for (let i = 0; i < playerCount; i++) {
+          const offset = 58 + i * 35;
+          const playerAccountKey = new PublicKey(pool.slice(offset, offset + 32)).toBase58();
+          const playerLottery = intFromBytes(pool.slice(offset + 32, offset + 32 + 2));
+          players.set(playerAccountKey, playerLottery);
+        }
+
+        lottery = {
+          award: award,
+          fund: fund,
+          price: price,
+          players: players
+        };
+        console.log("lottery:", lottery);
+        return lottery;
+      } else {
+        const fund = intFromBytes(pool.slice(0, 8));
+        const playerCount = intFromBytes(pool.slice(40, 42)); //console.log("Player count:", playerCount);
+
+        let players = new Map();
+
+        for (let i = 0; i < playerCount; i++) {
+          const offset = 42 + i * 32;
+          const playerAccountKey = new PublicKey(pool.slice(offset, offset + 32)).toBase58();
+          players.set(playerAccountKey, 1);
+        }
+
+        lottery = {
+          award: 0,
+          fund: fund,
+          price: 0,
+          players: players
+        };
+        console.log("lottery:", lottery);
+        return lottery;
       }
-
-      lottery = {
-        award: award,
-        fund: fund,
-        price: price,
-        players: players
-      };
-      console.log("lottery:", lottery);
-      return lottery;
     } else {
       return null;
     }
@@ -266,7 +288,7 @@ class SolongLottery {
 }
 
 // @flow
-const poolSpace = 8 + 8 + 8 + 32 + 2 + 1000 * (32 + 2 + 1);
+const poolSpace = 8 + 32 + 2 + 32 * 10000;
 const awardSpace = 2 + 1000 * (32 + 8 + 1 + 8);
 /**
  * Layout for LotteryInitState 

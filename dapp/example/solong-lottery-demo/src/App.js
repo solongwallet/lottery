@@ -26,20 +26,20 @@ class Content extends React.Component {
     this.onQueryPool = this.onQueryPool.bind(this);
 
     //let url =  'http://api.mainnet-beta.solana.com';
-    let url =  'https://solana-api.projectserum.com';
-    //let url =  'http://119.28.234.214:8899';
+    //let url =  'https://solana-api.projectserum.com';
+    let url =  'http://119.28.234.214:8899';
     //let url =  'https://devnet.solana.com';
     this.connection = new Connection(url);
-    //this.adminPrivKey = [140,85,119,173,23,204,204,148,203,41,107,83,176,34,167,63,180,128,189,18,187,235,122,218,79,254,216,149,117,170,115,74,56,28,173,97,136,25,66,83,199,115,122,109,206,35,28,138,109,100,88,118,102,116,122,85,208,44,64,221,40,55,226,250];
+    this.adminPrivKey = [140,85,119,173,23,204,204,148,203,41,107,83,176,34,167,63,180,128,189,18,187,235,122,218,79,254,216,149,117,170,115,74,56,28,173,97,136,25,66,83,199,115,122,109,206,35,28,138,109,100,88,118,102,116,122,85,208,44,64,221,40,55,226,250];
     this.playerPrivKey = [136,110,52,25,177,59,33,252,208,157,67,200,66,34,83,248,94,110,161,40,156,235,104,28,73,233,3,255,109,59,85,164,240,29,177,212,46,230,9,255,12,214,10,209,78,79,174,119,160,91,178,114,42,99,0,177,50,110,54,221,212,219,204,115];
 
     this.adminAccount = new Account(this.adminPrivKey);
     this.playerAccount = new Account(this.playerPrivKey);
-    this.programID = new PublicKey('CFeTFBBTepZn2WmnCBBQ6qVE7KP5Ts1vvZtfuM54VurM');
+    this.programID = new PublicKey('95zvnioz4A2wc7cezVf9SPTmDxAYcVZAAzjdnU5jDpTR');
     this.billboardAccount = new Account();
     this.poolAccount = new Account(); 
-    this.billboardAccountKey = new PublicKey("AFxZrsaur8Lk7M6FUHBByeB6nUH8m7ecd4dxKJMEyjXf");
-    this.poolAccountKey = new PublicKey("Gi1Fa9NTw5MufrQqb7axjQHrZfpqDnvrPUPntmTNX9Xq"); 
+    this.billboardAccountKey = new PublicKey("Dhk5ucvtyWXCFXtqwgNNWEyT7NHdzfyNfYGkJHMCx5ZR");
+    this.poolAccountKey = new PublicKey("GgtPHBhAWpJMxmWLcWhA5wY9h3NWkCZN2kGYeXAPUePG"); 
   }
 
 
@@ -81,7 +81,6 @@ class Content extends React.Component {
 
   async onQueryPool() {
     SolongLottery.GetLotteryPool(this.connection, 
-      //this.poolAccountKey,
       this.poolAccountKey).then((pool)=>{
           console.log("pool:", pool);
       });
@@ -144,34 +143,51 @@ class Content extends React.Component {
     }) 
   }
 
+
   async onSign() {
-    let trxi = SolongLottery.createSignInstruction(
-      this.playerAccount.publicKey,
-      //this.poolAccountKey,
-      this.poolAccount.publicKey,
-      this.programID,
-    );
 
-    const transaction = new Transaction();
-    transaction.add(trxi);
+    for (let i=0;i<5;i++) {
 
-    let signers= [this.playerAccount];
-    sendAndConfirmTransaction(this.connection, transaction, signers, {
-        skipPreflight: false,
-        commitment: 'recent',
-        preflightCommitment: 'recent',
-    }).then(()=>{
-      console.log("done sign");
-    }).catch((e)=>{
-      console.log("error:", e);
-    }) 
+      let player = new Account();
+      this.connection.requestAirdrop(player.publicKey, 10*1000000000).then(()=>{
+        setTimeout(
+          ()=>{
+// timeout
+            console.log("player:", player.publicKey.toBase58())
+        let trxi = SolongLottery.createSignInstruction(
+          //this.playerAccount.publicKey,
+          //this.poolAccountKey,
+          player.publicKey,
+          this.poolAccount.publicKey,
+          this.programID,
+        );
+  
+        const transaction = new Transaction();
+        transaction.add(trxi);
+  
+        let signers= [player];
+        sendAndConfirmTransaction(this.connection, transaction, signers, {
+            skipPreflight: false,
+            commitment: 'recent',
+            preflightCommitment: 'recent',
+        }).then(()=>{
+          console.log("done sign");
+        }).catch((e)=>{
+          console.log("error:", e);
+        }) 
+// timeout
+          },3000
+        )
+      })
+
+    }
   }
 
   async onGM() {
     let trxi = SolongLottery.createGMInstruction(
       this.adminAccount.publicKey,
-      this.poolAccountKey,
-      //this.poolAccount.publicKey,
+      //this.poolAccountKey,
+      this.poolAccount.publicKey,
       this.programID,
       2000000000,
       2000000000,
