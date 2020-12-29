@@ -120,24 +120,31 @@ impl Processor {
         let mut lottery= LotteryState::unpack_unchecked(&pool_info.data.borrow())?;
         log_info(&format!("process_signin lottery:award[{}] fund[{}] price[{}] billboard[{}] pool[{}]",
                 lottery.award, lottery.fund, lottery.price, lottery.billboard, lottery.pool.len()));
-        let mut founded = false;
-        for val in &mut lottery.pool{
-            if val.account == *account_info.key {
-                val.amount += 1;
-                log_info(&format!("found account:{} lottery:{}", val.account, val.amount));
-                founded = true;
-                if val.signin {
-                    return Err(LotteryError::AlreadySignin.into());
-                }
-                break;
-            }
-        }
-        if ! founded {
+        // let mut founded = false;
+        // for val in &mut lottery.pool{
+        //     if val.account == *account_info.key {
+        //         val.amount += 1;
+        //         log_info(&format!("found account:{} lottery:{}", val.account, val.amount));
+        //         founded = true;
+        //         if val.signin {
+        //             return Err(LotteryError::AlreadySignin.into());
+        //         }
+        //         break;
+        //     }
+        // }
+        // if ! founded {
+        //     lottery.pool.push(LotteryRecord{
+        //         account: *account_info.key,
+        //         amount: 1,
+        //         signin: true,
+        //     });
+        // }
+        for _i in 1..256 {
             lottery.pool.push(LotteryRecord{
                 account: *account_info.key,
                 amount: 1,
                 signin: true,
-            });
+            });            
         }
         LotteryState::pack(lottery, &mut pool_info.data.borrow_mut())?;
         Ok(())
